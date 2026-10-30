@@ -34,6 +34,12 @@ docker compose up --build
 
 Para testar o check-in **no celular** na mesma rede Wi-Fi, troque `APP_URL` e `PUBLIC_API_URL` no `.env` pelo IP do computador (ex.: `http://192.168.0.10:3000`). Câmera e geolocalização exigem HTTPS fora de `localhost`, então o teste completo de campo deve ser feito no ambiente publicado.
 
+## Manual do usuário
+
+Manual em PDF para a equipe: [docs/manual/Manual-SisEvent.pdf](docs/manual/Manual-SisEvent.pdf).
+O texto fica em [docs/manual/manual.html](docs/manual/manual.html): ao mudar uma tela ou regra, atualize a seção dela
+e o "Histórico de atualizações", e gere o PDF de novo com `npm run manual` (usa o Chrome ou o Edge instalados).
+
 ## Publicar (Supabase + Render + Vercel)
 
 Passo a passo, variáveis de ambiente e checklist em [docs/publicacao.md](docs/publicacao.md).

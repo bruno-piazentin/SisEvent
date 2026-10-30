@@ -8,7 +8,7 @@ import { Rodape } from './Rodape';
 type Acao = 'ver' | 'criar' | 'editar' | 'excluir' | 'aprovar' | 'ver_valores';
 interface ItemMenu { modulo: string; nome: string; acoes: Acao[] }
 interface Me {
-  usuario: { id: string; nome: string; perfil: string };
+  usuario: { id: string; nome: string; perfil: string; master?: boolean };
   empresa: { nome: string; slug: string };
   menu: ItemMenu[];
 }
@@ -72,6 +72,9 @@ export function Painel({ children }: { children: React.ReactNode }) {
             ))}
             {me.usuario.perfil === 'admin' && (
               <Link href="/admin" className={ativo('/admin') ? 'ativo' : ''}>Módulos e acessos <span className="cod">ADM</span></Link>
+            )}
+            {me.usuario.master && (
+              <Link href="/empresas" className={ativo('/empresas') ? 'ativo' : ''}>Empresas <span className="cod">MASTER</span></Link>
             )}
           </nav>
           <div className="rodape-menu" style={{ marginTop: 24, padding: '0 8px' }}>

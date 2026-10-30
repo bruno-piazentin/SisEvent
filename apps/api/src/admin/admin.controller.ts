@@ -5,7 +5,7 @@ import { DbService, ContextoDb } from '../db/db.service';
 import { Validar, uuid } from '../comum/validacao';
 import { Ctx, Usuario, UsuarioLogado } from '../auth/decorators';
 
-const MODULOS = ['M1', 'M2', 'M3', 'M4', 'M5', 'M6', 'M7', 'M8', 'M9', 'BI'] as const;
+export const MODULOS = ['M1', 'M2', 'M3', 'M4', 'M5', 'M6', 'M7', 'M8', 'M9', 'BI'] as const;
 const ACOES = ['ver', 'criar', 'editar', 'excluir', 'aprovar', 'ver_valores'] as const;
 
 const LiberarModulo = z.object({ ativo: z.boolean(), expira_em: z.coerce.date().nullable().optional() });

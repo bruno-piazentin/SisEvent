@@ -19,7 +19,9 @@ export class AutenticacaoGuard implements CanActivate {
     if (!cabecalho?.startsWith('Bearer ')) throw new UnauthorizedException({ codigo: 'nao_autenticado' });
     try {
       const p = jwt.verify(cabecalho.slice(7), config.jwtSegredo) as any;
-      req.usuario = { id: p.sub, tenantId: p.tid, nome: p.nome, perfil: p.perfil } satisfies UsuarioLogado;
+      // master só vale enquanto ele estiver configurado no ambiente
+      const master = !!p.master && !!config.master;
+      req.usuario = { id: p.sub, tenantId: p.tid, nome: p.nome, perfil: p.perfil, master } satisfies UsuarioLogado;
       return true;
     } catch {
       throw new UnauthorizedException({ codigo: 'sessao_expirada', mensagem: 'Sessão expirada. Entre novamente.' });

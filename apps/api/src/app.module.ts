@@ -5,6 +5,7 @@ import { ErrosFilter } from './comum/erros.filter';
 import { AutenticacaoGuard, ModuloGuard } from './auth/guards';
 import { AuthController } from './auth/auth.controller';
 import { AdminController } from './admin/admin.controller';
+import { EmpresasController } from './admin/empresas.controller';
 import { CadastrosController } from './cadastros/cadastros.controller';
 import { ProfissionaisController } from './profissionais/profissionais.controller';
 import { EventosController } from './eventos/eventos.controller';
@@ -24,6 +25,7 @@ import { PublicoController } from './publico/publico.controller';
   controllers: [
     AuthController,
     AdminController,
+    EmpresasController,       // cadastro de empresas (somente master)
     CadastrosController,      // praças, funções, clientes (M3)
     ProfissionaisController,  // M1
     EventosController,        // M4

@@ -8,6 +8,7 @@ export interface UsuarioLogado {
   tenantId: string;
   nome: string;
   perfil: string; // admin | central | supervisor | financeiro
+  master?: boolean; // usuário master de manutenção: acessa o cadastro de empresas
 }
 
 export const PUBLICO = 'publico';

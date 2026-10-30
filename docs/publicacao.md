@@ -46,9 +46,11 @@ Faça na ordem: banco → API → site.
    Isso cria as tabelas, as regras e o usuário `sisevent_api` (sem acesso fora da própria empresa).
    Não coloque `?sslmode=` na URL: o `DB_SSL=true` já cuida da criptografia.
 
-5. A empresa e a administradora reais: em produção não há seed. Crie pelo SQL Editor do Supabase
-   (`tenant`, `criar_perfis_padrao`, `modulo_liberado`, `usuario`) seguindo o modelo de `apps/api/db/seed.sql`,
-   ou rode o seed em homologação e ajuste nomes, e-mails e senhas.
+5. As empresas: em produção não há seed. Com o usuário master configurado (veja o passo 2.3), o
+   **primeiro login** dele cria a empresa digitada no campo Empresa (ex.: `rafadutra`), com todos os
+   módulos, só enquanto o banco não tiver nenhuma empresa. As demais empresas e os usuários de cada uma
+   são cadastrados na tela **Empresas** (menu, só para o master). Cada empresa é isolada pelo RLS:
+   mesmo banco, mas nenhuma enxerga os dados de outra.
 
 ## 2. API (Render)
 
@@ -87,6 +89,8 @@ Faça na ordem: banco → API → site.
    (aparece na lista de usuários e fica na auditoria). A senha não fica no código nem no ambiente, só o hash:
    gere com `npm run hash-senha -- "SENHA"` em `apps/api` e cole o resultado em `MASTER_SENHA_HASH`.
    Para trocar a senha, gere outro hash e troque a variável; vale para todas as empresas.
+   Só o master vê o menu **Empresas**: cadastrar empresas, liberar módulos, criar e inativar usuários,
+   redefinir senhas e inativar uma empresa inteira (ninguém dela entra até reativar; os dados ficam).
    Sem essas variáveis, o master fica desligado.
 
    No Supabase, o usuário do pooler leva o *ref* do projeto: `sisevent_api.<ref>`, não só `sisevent_api`.

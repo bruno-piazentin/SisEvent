@@ -9,6 +9,7 @@
     "migrate": "npm run migrate -w @sisevent/api",
     "seed": "npm run seed -w @sisevent/api",
     "test:db": "npm run test:db -w @sisevent/api",
-    "build": "npm run build -w @sisevent/api && npm run build -w @sisevent/web"
+    "build": "npm run build -w @sisevent/api && npm run build -w @sisevent/web",
+    "manual": "node scripts/gerar-manual.mjs"
   }
 }

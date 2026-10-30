@@ -1,0 +1,405 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Manual do SisEvent</title>
+<!--
+  Fonte do manual em PDF. Ao mudar uma tela ou regra do sistema, atualize a seção dela aqui
+  e acrescente uma linha em "Histórico de atualizações". Gere o PDF com: npm run manual
+  {{ATUALIZADO_EM}} e {{VERSAO}} são preenchidos pelo script na hora de gerar.
+-->
+<style>
+  @page { size: A4; margin: 18mm 16mm 20mm;
+    @bottom-left { content: "Manual do SisEvent"; font: 8pt 'Segoe UI', sans-serif; color: #8a8592; }
+    @bottom-right { content: counter(page) " / " counter(pages); font: 8pt 'Segoe UI', sans-serif; color: #8a8592; } }
+  @page :first { @bottom-left { content: none; } @bottom-right { content: none; } }
+  :root { --roxo: #5b2a86; --roxo-claro: #efe7f6; --coral: #ef6f4c; --texto: #1d1b20; --suave: #6b6773; --borda: #e6e3e8;
+          --ok: #1f8a5b; --ok-claro: #e3f4ec; --alerta: #8a5a12; --alerta-claro: #fbf1dc; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 10.5pt/1.55 'Segoe UI', Inter, system-ui, sans-serif; color: var(--texto); background: #fff; }
+  h1, h2, h3 { line-height: 1.25; color: var(--roxo); }
+  h2 { font-size: 17pt; margin: 0 0 10px; padding-bottom: 6px; border-bottom: 2px solid var(--roxo-claro); break-after: avoid; }
+  h3 { font-size: 12pt; margin: 18px 0 6px; break-after: avoid; }
+  p { margin: 0 0 8px; }
+  ul, ol { margin: 0 0 10px; padding-left: 20px; }
+  li { margin-bottom: 3px; }
+  section.capitulo { break-before: page; }
+  table { width: 100%; border-collapse: collapse; margin: 6px 0 12px; font-size: 9.5pt; break-inside: avoid; }
+  th, td { text-align: left; vertical-align: top; padding: 5px 8px; border-bottom: 1px solid var(--borda); }
+  th { background: var(--roxo-claro); color: var(--roxo); font-weight: 600; }
+  .dica, .atencao { padding: 8px 12px; border-radius: 8px; margin: 8px 0 12px; break-inside: avoid; }
+  .dica { background: var(--ok-claro); border-left: 4px solid var(--ok); }
+  .atencao { background: var(--alerta-claro); border-left: 4px solid var(--alerta); }
+  .dica b:first-child, .atencao b:first-child { display: block; margin-bottom: 2px; }
+  .botao { display: inline-block; padding: 0 6px; border: 1px solid var(--borda); border-radius: 5px; background: #faf9fb; font-weight: 600; font-size: 9.5pt; white-space: nowrap; }
+  .menu { font-weight: 600; color: var(--roxo); }
+  code { font-family: Consolas, monospace; background: #f3f1f5; padding: 0 4px; border-radius: 4px; font-size: 9.5pt; }
+  ol.passos { counter-reset: p; list-style: none; padding-left: 0; }
+  ol.passos > li { counter-increment: p; position: relative; padding-left: 30px; margin-bottom: 6px; }
+  ol.passos > li::before { content: counter(p); position: absolute; left: 0; top: 1px; width: 20px; height: 20px; border-radius: 50%;
+    background: var(--roxo); color: #fff; font-size: 9pt; font-weight: 700; text-align: center; line-height: 20px; }
+
+  /* capa */
+  .capa { height: 255mm; display: flex; flex-direction: column; justify-content: space-between; }
+  .capa .marca { display: inline-flex; align-items: center; justify-content: center; width: 56px; height: 56px; border-radius: 14px;
+    background: var(--roxo); color: #fff; font-weight: 800; font-size: 20pt; }
+  .capa h1 { font-size: 38pt; margin: 28px 0 6px; }
+  .capa .sub { font-size: 14pt; color: var(--suave); }
+  .capa .faixa { height: 6px; width: 120px; background: var(--coral); border-radius: 3px; margin-top: 22px; }
+  .capa .meta { font-size: 10pt; color: var(--suave); border-top: 1px solid var(--borda); padding-top: 10px; }
+
+  /* sumário */
+  .sumario ol { padding-left: 0; list-style: none; counter-reset: s; }
+  .sumario li { counter-increment: s; display: flex; gap: 8px; padding: 5px 0; border-bottom: 1px dotted var(--borda); }
+  .sumario li::before { content: counter(s) "."; color: var(--roxo); font-weight: 700; width: 22px; }
+  .sumario a { color: var(--texto); text-decoration: none; }
+  .sumario .desc { color: var(--suave); font-size: 9.5pt; margin-left: auto; text-align: right; }
+</style>
+</head>
+<body>
+
+<div class="capa">
+  <div>
+    <div class="marca">RD</div>
+    <h1>Manual do SisEvent</h1>
+    <div class="sub">Gestão de casting, escala, check-in e financeiro de eventos</div>
+    <div class="faixa"></div>
+  </div>
+  <div class="meta">
+    Atualizado em {{ATUALIZADO_EM}} · versão {{VERSAO}}<br>
+    Para a equipe interna das empresas que usam o SisEvent. As telas que aparecem para cada pessoa
+    dependem dos módulos liberados para a empresa e do perfil de acesso dela.
+  </div>
+</div>
+
+<section class="capitulo sumario">
+  <h2>Sumário</h2>
+  <ol>
+    <li><a href="#acesso">Acesso ao sistema</a><span class="desc">login, perfis, módulos</span></li>
+    <li><a href="#painel">Painel inicial</a><span class="desc">indicadores e evolução de eventos</span></li>
+    <li><a href="#clientes">Clientes</a><span class="desc">cadastro, colaboradores, marcas, relatórios</span></li>
+    <li><a href="#profissionais">Banco de talentos</a><span class="desc">profissionais, fotos, filtros, relatório</span></li>
+    <li><a href="#eventos">Eventos</a><span class="desc">cadastro, local, turnos, postos</span></li>
+    <li><a href="#escala">Escala e convocação</a><span class="desc">sugestões, convites, suplentes</span></li>
+    <li><a href="#campo">Check-in e campo</a><span class="desc">link do profissional, QR, presença</span></li>
+    <li><a href="#fechamento">Fechamento e financeiro</a><span class="desc">pendências, pagamentos, margem</span></li>
+    <li><a href="#ocorrencias">Ocorrências</a><span class="desc">registro permanente em fichas</span></li>
+    <li><a href="#admin">Módulos e acessos</a><span class="desc">administradora da empresa</span></li>
+    <li><a href="#empresas">Empresas (usuário master)</a><span class="desc">várias empresas na mesma plataforma</span></li>
+    <li><a href="#breve">Módulos em preparação</a><span class="desc">M2, M8 e M9</span></li>
+    <li><a href="#historico">Histórico de atualizações</a><span class="desc">o que mudou em cada versão</span></li>
+  </ol>
+</section>
+
+<!-- ================================================================ -->
+<section class="capitulo" id="acesso">
+  <h2>1. Acesso ao sistema</h2>
+  <h3>Entrar</h3>
+  <p>Na tela de login, preencha três campos:</p>
+  <table>
+    <tr><th style="width:28%">Campo</th><th>O que digitar</th></tr>
+    <tr><td>Empresa</td><td>O código de acesso da sua empresa, em letras minúsculas (ex.: <code>rafadutra</code>). Quem informa é a administradora.</td></tr>
+    <tr><td>E-mail</td><td>Seu e-mail cadastrado como usuário.</td></tr>
+    <tr><td>Senha</td><td>Sua senha (mínimo de 8 caracteres).</td></tr>
+  </table>
+  <div class="dica"><b>Profissionais não usam esta tela.</b>Promotores, recepcionistas e demais profissionais entram pelo link pessoal que recebem no WhatsApp (veja o capítulo 7).</div>
+  <p>Por segurança, a mensagem de erro é sempre a mesma (“E-mail ou senha incorretos”), seja o e-mail inexistente, a senha errada ou a empresa inativa. A sessão vale por 12 horas; depois disso o sistema pede o login de novo.</p>
+
+  <h3>Perfis de acesso</h3>
+  <table>
+    <tr><th style="width:28%">Perfil</th><th>Uso típico</th></tr>
+    <tr><td>Administradora</td><td>Acesso total a todos os módulos liberados para a empresa, inclusive excluir registros e configurar acessos.</td></tr>
+    <tr><td>Central / coordenação</td><td>Operação do dia a dia: cadastros, eventos e escala.</td></tr>
+    <tr><td>Supervisor</td><td>Acompanhamento em campo: presença, check-in e ocorrências.</td></tr>
+    <tr><td>Financeiro</td><td>Fechamento, valores e pagamentos.</td></tr>
+  </table>
+  <p>O que cada perfil pode fazer (ver, criar, editar, excluir, aprovar e ver valores) é ajustado pela administradora em <span class="menu">Módulos e acessos</span>.</p>
+
+  <h3>Módulos</h3>
+  <p>O menu lateral só mostra os módulos liberados para a empresa <b>e</b> permitidos para o seu perfil.</p>
+  <table>
+    <tr><th style="width:12%">Código</th><th style="width:30%">Menu</th><th>Para que serve</th></tr>
+    <tr><td>BI</td><td>Painel</td><td>Indicadores e gráficos da tela inicial.</td></tr>
+    <tr><td>M1</td><td>Profissionais</td><td>Banco de talentos.</td></tr>
+    <tr><td>M3</td><td>Clientes</td><td>Cadastro comercial de clientes.</td></tr>
+    <tr><td>M4</td><td>Eventos</td><td>Eventos, turnos, postos e checklist.</td></tr>
+    <tr><td>M5</td><td>Escala</td><td>Convocação e alocação (acessada de dentro do evento).</td></tr>
+    <tr><td>M6</td><td>Campo</td><td>Check-in por link e QR, presença.</td></tr>
+    <tr><td>M7</td><td>Financeiro</td><td>Fechamento, pagamentos e margem.</td></tr>
+    <tr><td>M2, M8, M9</td><td>Captação, Leads, Gestão</td><td>Em preparação (capítulo 12).</td></tr>
+  </table>
+</section>
+
+<!-- ================================================================ -->
+<section class="capitulo" id="painel">
+  <h2>2. Painel inicial</h2>
+  <p>É a primeira tela após o login (menu <span class="menu">Painel</span>). Mostra:</p>
+  <ul>
+    <li><b>Eventos no mês</b> e <b>ocupação da base</b> (percentual sobre o efetivo escalado).</li>
+    <li><b>Próximos eventos</b>, com destaque para os que estão perto de começar.</li>
+    <li><b>Margem por cliente</b> (só para quem tem permissão de ver valores) e <b>profissionais mais assíduos</b>.</li>
+  </ul>
+  <h3>Comparativo e evolução de eventos</h3>
+  <p>Abaixo dos demais blocos ficam:</p>
+  <ul>
+    <li><b>Comparativo com o mês anterior</b>: quantidade de eventos do mês atual e a variação em relação ao mês passado (cancelados não entram na conta).</li>
+    <li><b>Total no ano</b>: ao clicar no cartão, informe um período (<i>De</i> e <i>Até</i>) para contar os eventos de qualquer intervalo.</li>
+    <li><b>Gráfico dos últimos 12 meses</b>, para acompanhar a evolução mês a mês.</li>
+  </ul>
+  <p>Os indicadores são recalculados automaticamente. A administradora também pode forçar a atualização pelo botão do BI.</p>
+</section>
+
+<!-- ================================================================ -->
+<section class="capitulo" id="clientes">
+  <h2>3. Clientes</h2>
+  <p>Menu <span class="menu">Clientes</span>. A lista tem busca e mostra a situação de cada cliente (ativo ou inativo).</p>
+
+  <h3>Cadastrar um cliente</h3>
+  <ol class="passos">
+    <li>Clique em <span class="botao">Novo cliente</span>.</li>
+    <li>Escolha <b>Pessoa jurídica</b> (pede CNPJ) ou <b>Pessoa física</b> (pede CPF). O sistema confere os dígitos do documento.</li>
+    <li>Escolha o <b>Tipo</b>: agência, produtora, indústria, representante, revenda, supermercado ou outro.</li>
+    <li>Preencha telefone, e-mail da empresa e prazo de pagamento.</li>
+    <li>Digite o <b>CEP</b>: logradouro, bairro, cidade e UF são preenchidos sozinhos. Complete número e complemento.</li>
+    <li>Em <b>Marcas</b>, busque as marcas atendidas. Se a marca não existir, ela é criada no catálogo e fica disponível para os próximos cadastros.</li>
+    <li>Informe as <b>Redes sociais</b> (Instagram, TikTok, Facebook, LinkedIn, YouTube, X e site).</li>
+    <li>Salve. Depois de salvar, vincule os colaboradores na ficha do cliente.</li>
+  </ol>
+
+  <h3>Ficha do cliente</h3>
+  <p>Clique no cliente para abrir a ficha. Ela reúne:</p>
+  <ul>
+    <li><b>Todos os eventos do cliente</b>, com a situação de cada um (em aberto, em execução, fechado…). Clique em um evento para ver os detalhes.</li>
+    <li><b>Dados cadastrais</b> e o botão <span class="botao">Editar cadastro</span>.</li>
+    <li><b>Colaboradores</b> (contatos/agentes): nome, sobrenome, apelido, cargo, e-mail e telefone. Cadastre quantos precisar e marque um como <b>principal</b>.</li>
+    <li><b>Ocorrências</b> do cliente (capítulo 9).</li>
+  </ul>
+
+  <h3>Ativar, inativar e excluir</h3>
+  <ul>
+    <li><b>Inativar/Reativar</b>: muda a situação do cliente, sempre com confirmação.</li>
+    <li><b>Excluir</b>: só a administradora. O cliente some das listas, mas <b>continua guardado</b> no banco junto com o histórico de eventos.</li>
+  </ul>
+  <h3>Recuperar um cliente excluído</h3>
+  <ol class="passos">
+    <li>Em <span class="menu">Clientes</span>, abra <b>Recuperar exclusão</b>.</li>
+    <li>Digite o <b>CNPJ</b> ou o <b>CPF</b> do cliente.</li>
+    <li>Confira os dados encontrados e clique em <span class="botao">Recuperar cliente</span>.</li>
+  </ol>
+
+  <h3>Relatórios de clientes</h3>
+  <ul>
+    <li><b>Todos os clientes</b>: lista completa com documento, tipo, contato e situação.</li>
+    <li><b>Detalhado de um cliente</b>: dados cadastrais, colaboradores e todos os eventos.</li>
+  </ul>
+  <p>Os dois podem ser impressos, salvos em PDF (pela impressão do navegador) ou baixados em planilha (CSV).</p>
+</section>
+
+<!-- ================================================================ -->
+<section class="capitulo" id="profissionais">
+  <h2>4. Banco de talentos</h2>
+  <p>Menu <span class="menu">Profissionais</span>. Reúne promotores, recepcionistas, hostess e demais funções.</p>
+
+  <h3>Buscar e filtrar</h3>
+  <p>Filtros disponíveis: nome, função, praça, status, gênero, altura mínima, camiseta, <b>cor do cabelo</b>, <b>tipo de cabelo</b> e disponibilidade (livre em um período <i>de… até…</i>). Cor e tipo de cabelo são seleções, como a função.</p>
+
+  <h3>Cadastro do profissional</h3>
+  <table>
+    <tr><th style="width:28%">Grupo</th><th>Campos</th></tr>
+    <tr><td>Identificação</td><td>Nome completo, nome artístico, nascimento, gênero, CPF, RG, status.</td></tr>
+    <tr><td>Contato</td><td>Celular (WhatsApp), e-mail, cidade, UF, bairro, praça base, raio de deslocamento.</td></tr>
+    <tr><td>Perfil físico</td><td>Altura, peso, manequim, camiseta, calçado, busto, cintura, quadril, olhos, tipo e cor do cabelo.</td></tr>
+    <tr><td>Outros</td><td>CNH e validade, restrições alimentares, idiomas, experiência, redes sociais.</td></tr>
+    <tr><td>Pagamento</td><td>Forma de contratação, chave PIX, CNPJ MEI.</td></tr>
+    <tr><td>Interno</td><td>Observações internas (não aparecem para o profissional).</td></tr>
+  </table>
+
+  <h3>Ficha do profissional</h3>
+  <ul>
+    <li><b>Perfil</b>, <b>disponibilidade</b>, <b>avaliações</b> recebidas nos eventos e <b>documentos</b>.</li>
+    <li><b>Fotos</b> (abaixo de Documentos): envie fotos de rosto, corpo inteiro, uniforme etc. e marque a principal. As fotos são reduzidas automaticamente antes do envio.</li>
+    <li><span class="botao">Gerar link de acesso</span>: cria o link pessoal do profissional e permite <b>enviar pelo WhatsApp</b>. O link só é mostrado nesse momento; gere outro se ele se perder.</li>
+    <li><b>Ocorrências</b> do profissional (capítulo 9).</li>
+  </ul>
+
+  <h3>Relatório de profissionais</h3>
+  <p>Clique em <span class="botao">Relatório</span>. Se houver filtros aplicados, o sistema pergunta:</p>
+  <ul>
+    <li><span class="botao">Manter filtros</span>: o relatório traz só os profissionais da busca atual.</li>
+    <li><span class="botao">Todos os profissionais</span>: ignora os filtros.</li>
+  </ul>
+</section>
+
+<!-- ================================================================ -->
+<section class="capitulo" id="eventos">
+  <h2>5. Eventos</h2>
+  <p>Menu <span class="menu">Eventos</span>. A lista pode ser filtrada por situação e por período (<i>De/Até</i>).</p>
+
+  <h3>Criar um evento</h3>
+  <ol class="passos">
+    <li>Clique em <b>Novo evento</b>.</li>
+    <li>Preencha nome, cliente, marca e praça.</li>
+    <li><b>Local</b>: nome do local, <b>CEP</b> (preenche o endereço) e endereço.</li>
+    <li><b>Contato no local</b>: nome, telefone e e-mail de quem recebe a equipe.</li>
+    <li>Situação inicial e <b>tolerância de atraso</b> em minutos (usada no check-in).</li>
+    <li><b>Observações</b> em texto livre (ex.: “Pausa para almoço das 12h às 14h”).</li>
+    <li><b>Turnos</b>: nome, início e fim. Use <i>adicionar turno</i> para eventos com mais de um período.</li>
+    <li>Opcional: anexe <b>fotos do local</b>.</li>
+    <li>Clique em <span class="botao">Criar evento</span>.</li>
+  </ol>
+
+  <h3>Local, geolocalização e fotos</h3>
+  <ul>
+    <li><span class="botao">Geolocalização</span>: grava a posição do local a partir do endereço ou da localização do aparelho. Ela é usada para conferir a distância no check-in.</li>
+    <li><b>Fotos do local</b>: ajudam a equipe a reconhecer a entrada e o espaço.</li>
+    <li>Depois que o evento é <b>fechado</b>, o local não pode mais ser alterado.</li>
+  </ul>
+  <div class="atencao"><b>Sem geolocalização</b>o check-in continua registrando onde a pessoa estava, mas não confere a distância até o local.</div>
+
+  <h3>Postos, requisitos e checklist</h3>
+  <p>Cada turno tem postos (ex.: 4 promotoras). O posto define a função, a quantidade, o uniforme, os valores (pago e cobrado, visíveis só para quem pode ver valores) e os <b>requisitos</b>, como altura, idiomas e <b>tipo/cor de cabelo</b>. O <b>checklist de produção</b> lista as tarefas com prazo; marque cada uma ao concluir.</p>
+
+  <h3>Clonar um evento</h3>
+  <p><span class="botao">Clonar como novo</span> copia o evento (local, turnos, postos e observações) para uma nova data e hora de início. A escala não é copiada.</p>
+</section>
+
+<!-- ================================================================ -->
+<section class="capitulo" id="escala">
+  <h2>6. Escala e convocação</h2>
+  <p>Dentro do evento, na aba <span class="botao">Postos e escala</span>.</p>
+  <ol class="passos">
+    <li>No posto, clique em <span class="botao">Encontrar profissionais</span>.</li>
+    <li>O sistema lista os melhores candidatos com uma <b>pontuação</b>, os motivos (em verde) e os alertas (em amarelo). Já ficam de fora quem tem conflito de horário, indisponibilidade, está bloqueado ou não atende aos requisitos.</li>
+    <li>Clique em <span class="botao">Convidar</span> para titular ou em <span class="botao">Suplente</span>.</li>
+    <li>O profissional confirma pelo link pessoal. A equipe também pode <span class="botao">Confirmar</span> manualmente.</li>
+  </ol>
+  <table>
+    <tr><th style="width:28%">Situação</th><th>Significado</th></tr>
+    <tr><td>convidado</td><td>Aguardando resposta do profissional.</td></tr>
+    <tr><td>confirmado</td><td>Vai trabalhar no posto.</td></tr>
+    <tr><td>recusado</td><td>Não pode ir (o motivo fica no histórico).</td></tr>
+    <tr><td>cancelado</td><td>Retirado da escala pela equipe (motivo obrigatório).</td></tr>
+    <tr><td>substituído</td><td>Trocado por outra pessoa.</td></tr>
+  </table>
+  <p>Se abrir uma vaga, use <span class="botao">Promover</span> num suplente para que ele vire titular.</p>
+</section>
+
+<!-- ================================================================ -->
+<section class="capitulo" id="campo">
+  <h2>7. Check-in e campo</h2>
+  <h3>Área do profissional (link pessoal)</h3>
+  <p>Pelo link recebido no WhatsApp, sem senha, o profissional:</p>
+  <ul>
+    <li>vê as <b>novas convocações</b> e responde <span class="botao">Confirmo</span> ou <span class="botao">Não posso</span>;</li>
+    <li>vê os <b>próximos eventos</b> e os <b>pagamentos</b>;</li>
+    <li>faz <b>check-in e check-out</b>, que abre <b>2 horas antes</b> do início, lendo o QR com a câmera ou digitando o código de 6 dígitos.</li>
+  </ul>
+  <h3>QR de check-in</h3>
+  <p>No evento (ou no menu <span class="menu">Campo</span>), clique em <span class="botao">Abrir QR de check-in</span> e deixe a tela aberta num tablet ou celular na entrada. O QR muda sozinho e cada código <b>vale por 30 segundos</b>, o que impede o check-in à distância com uma foto do QR.</p>
+  <div class="dica"><b>Primeiro acesso no celular</b>Se o profissional escanear o QR sem ter aberto o link pessoal antes, o sistema pede que ele abra o link recebido no WhatsApp e escaneie de novo.</div>
+
+  <h3>Presença em campo</h3>
+  <p>Aba <span class="botao">Presença em campo</span> do evento, que se atualiza a cada 20 segundos. Mostra quem está presente, atrasado (com os minutos de atraso), aguardando, saiu ou faltou. Registros fora do esperado (por exemplo, longe do local) aparecem com a marca <b>verificar</b>.</p>
+  <p>Quem tem permissão pode lançar <span class="botao">Entrada manual</span>, <span class="botao">Saída manual</span> ou <span class="botao">Falta</span>, sempre com um motivo.</p>
+  <p>O menu <span class="menu">Campo</span> lista os eventos de hoje e amanhã, com atalhos para o QR e para a presença.</p>
+</section>
+
+<!-- ================================================================ -->
+<section class="capitulo" id="fechamento">
+  <h2>8. Fechamento e financeiro</h2>
+  <h3>Fechar um evento</h3>
+  <p>Aba <span class="botao">Fechamento</span> do evento. Antes de fechar, o sistema lista as <b>pendências</b>:</p>
+  <ul>
+    <li><b>Vaga aberta</b>: preencha a vaga ou clique em <span class="botao">Justificar</span> para fechar com ela em aberto.</li>
+    <li><b>Check-out pendente</b>: não impede o fechamento. Quem ficou sem check-out é calculado até o fim do turno.</li>
+  </ul>
+  <p>Com as pendências resolvidas, quem tem permissão de aprovar no Financeiro clica em <span class="botao">Fechar evento e gerar pagamentos</span>.</p>
+  <div class="atencao"><b>O fechamento trava o evento</b>A escala e o local deixam de poder ser alterados, e os valores a pagar são gerados.</div>
+  <p>Depois de fechado, o evento mostra a <b>receita</b>, o <b>custo de equipe</b>, os <b>custos diretos</b> e a <b>margem</b>, além dos <b>valores a pagar</b> por profissional (diária, hora extra, adicional noturno, descontos/adicionais e total).</p>
+  <h3>Menu Financeiro</h3>
+  <ul>
+    <li><b>Pagamentos pendentes</b> dos eventos fechados.</li>
+    <li><b>Margem por evento</b> e <b>por cliente</b>.</li>
+  </ul>
+</section>
+
+<!-- ================================================================ -->
+<section class="capitulo" id="ocorrencias">
+  <h2>9. Ocorrências</h2>
+  <p>As fichas de <b>cliente</b> e de <b>profissional</b> têm o botão <span class="botao">Ocorrência</span>, para registrar fatos importantes em texto livre (ex.: atraso recorrente, elogio do cliente, combinado comercial).</p>
+  <div class="atencao"><b>Registro permanente</b>Cada ocorrência fica registrada com o nome de quem lançou, a data e a hora, e não pode ser alterada nem apagada.</div>
+</section>
+
+<!-- ================================================================ -->
+<section class="capitulo" id="admin">
+  <h2>10. Módulos e acessos</h2>
+  <p>Menu <span class="menu">Módulos e acessos</span>, só para a administradora da empresa. O acesso é decidido em três camadas:</p>
+  <ol class="passos">
+    <li><b>Módulos liberados para a empresa</b>: <span class="botao">Liberar</span> ou <span class="botao">Bloquear</span> cada módulo. Um módulo bloqueado some do menu de todos.</li>
+    <li><b>Permissões por perfil</b>: para cada perfil (Central, Supervisor, Financeiro), marque o que ele pode fazer em cada módulo: ver, criar, editar, excluir, aprovar e ver valores. A Administradora tem acesso total aos módulos liberados.</li>
+    <li><b>Ajustes individuais</b>: exceções para uma pessoa específica, que valem mais que o perfil.</li>
+  </ol>
+  <p>As mudanças valem a partir do próximo carregamento da tela de cada usuário.</p>
+</section>
+
+<!-- ================================================================ -->
+<section class="capitulo" id="empresas">
+  <h2>11. Empresas (usuário master)</h2>
+  <p>O SisEvent atende várias empresas na mesma plataforma, por exemplo <code>rafadutra</code> e <code>rfk</code>. Cada empresa só enxerga os próprios dados: clientes, profissionais, eventos e valores de uma nunca aparecem para outra. Essa separação é garantida pelo banco de dados, não só pelas telas.</p>
+  <p>O menu <span class="menu">Empresas</span> aparece só para o <b>usuário master</b> de manutenção. O master entra em qualquer empresa digitando o código dela no login, e lá tem perfil de Administradora.</p>
+
+  <h3>Cadastrar uma empresa</h3>
+  <ol class="passos">
+    <li>Em <span class="menu">Empresas</span>, clique em <span class="botao">Nova empresa</span>.</li>
+    <li>Informe o <b>nome</b>. O <b>código de acesso</b> é sugerido a partir do nome (só letras minúsculas, números e hífen) e pode ser ajustado.</li>
+    <li>Marque os <b>módulos liberados</b>.</li>
+    <li>Cadastre a <b>administradora</b> da empresa: nome, e-mail e senha inicial.</li>
+    <li>Clique em <span class="botao">Criar empresa</span> e informe à administradora o código de acesso, o e-mail e a senha.</li>
+  </ol>
+  <p>A empresa já nasce com os perfis padrão (Administradora, Central, Supervisor e Financeiro).</p>
+
+  <h3>Usuários de uma empresa</h3>
+  <p>Na linha da empresa, clique em <span class="botao">Usuários</span> para:</p>
+  <ul>
+    <li>cadastrar um <b>novo usuário</b> (nome, e-mail, perfil e senha inicial);</li>
+    <li>trocar o <b>perfil</b>;</li>
+    <li><span class="botao">Redefinir senha</span>;</li>
+    <li><span class="botao">Inativar</span> ou reativar: o usuário inativo não consegue entrar.</li>
+  </ul>
+
+  <h3>Inativar uma empresa</h3>
+  <p><span class="botao">Inativar</span>, com confirmação: ninguém da empresa consegue entrar até ela ser reativada. Os dados ficam guardados. O master continua entrando, para manutenção. A empresa em que o master está logado não pode ser inativada.</p>
+</section>
+
+<!-- ================================================================ -->
+<section class="capitulo" id="breve">
+  <h2>12. Módulos em preparação</h2>
+  <p>Estes módulos aparecem no menu quando liberados, com a lista do que vão oferecer:</p>
+  <table>
+    <tr><th style="width:12%">Código</th><th style="width:30%">Módulo</th><th>Previsto</th></tr>
+    <tr><td>M2</td><td>Captação e triagem</td><td>Formulário público de cadastro, fila de triagem e convite em massa por perfil e praça.</td></tr>
+    <tr><td>M8</td><td>Leads e relatórios</td><td>Captura de leads com consentimento (LGPD), deduplicação, exportação para o cliente e relatório pós-evento.</td></tr>
+    <tr><td>M9</td><td>Painel de gestão</td><td>Contas a receber, cadastro de fornecedores, eventos em risco e ocupação da base.</td></tr>
+  </table>
+</section>
+
+<!-- ================================================================ -->
+<section class="capitulo" id="historico">
+  <h2>13. Histórico de atualizações</h2>
+  <table>
+    <tr><th style="width:18%">Data</th><th>O que mudou</th></tr>
+    <tr><td>30/10/2026</td><td>
+      <b>Empresas</b>: cadastro de várias empresas pelo usuário master, com usuários, perfis, módulos e inativação (capítulo 11).<br>
+      <b>Usuário master</b> de manutenção, com acesso a qualquer empresa.<br>
+      <b>Manual em PDF</b> criado.</td></tr>
+    <tr><td>Versão inicial</td><td>
+      Painel com comparativo mensal, total por período e gráfico de 12 meses.<br>
+      Clientes: pessoa física/jurídica, CEP automático, colaboradores, marcas, redes sociais, ativo/inativo, exclusão com recuperação, relatórios.<br>
+      Profissionais: tipo e cor de cabelo (também como requisito do posto), redes sociais, fotos, relatório com ou sem filtros.<br>
+      Eventos: CEP, observações, contato no local, fotos do local e botão de geolocalização.<br>
+      Ocorrências em clientes e profissionais.</td></tr>
+  </table>
+</section>
+
+</body>
+</html>

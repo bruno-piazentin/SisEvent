@@ -5,6 +5,9 @@ import { z } from 'zod';
 import { config } from '../config';
 import { DbService } from '../db/db.service';
 import { Validar } from '../comum/validacao';
+import { randomUUID } from 'node:crypto';
+import { MODULOS } from '../admin/admin.controller';
+import { criarEmpresa } from '../admin/empresas.controller';
 import { Publico, Usuario, UsuarioLogado } from './decorators';
 
 const Login = z.object({
@@ -21,19 +24,17 @@ export class AuthController {
   @Post('login')
   @HttpCode(200)
   async login(@Body(new Validar(Login)) dto: z.infer<typeof Login>) {
-    const u = config.master && dto.email.toLowerCase() === config.master.email
-      ? await this.loginMaster(dto)
-      : await this.loginComum(dto);
+    const master = !!config.master && dto.email.toLowerCase() === config.master.email;
+    const u = master ? await this.loginMaster(dto) : await this.loginComum(dto);
     // mesma mensagem para usuário inexistente e senha errada (não revela quem tem conta)
     if (!u) throw new UnauthorizedException({ codigo: 'credenciais_invalidas', mensagem: 'E-mail ou senha incorretos.' });
 
     await this.db.tx({ tenantId: u.tenant_id, usuarioId: u.id }, (tx) =>
       tx.q('UPDATE usuario SET ultimo_acesso = now() WHERE id = $1', [u.id]),
     );
-    const token = jwt.sign({ sub: u.id, tid: u.tenant_id, nome: u.nome, perfil: u.perfil }, config.jwtSegredo, {
-      expiresIn: config.jwtValidade as jwt.SignOptions['expiresIn'],
-    });
-    return { token, usuario: { id: u.id, nome: u.nome, perfil: u.perfil } };
+    const token = jwt.sign({ sub: u.id, tid: u.tenant_id, nome: u.nome, perfil: u.perfil, ...(master ? { master } : {}) },
+      config.jwtSegredo, { expiresIn: config.jwtValidade as jwt.SignOptions['expiresIn'] });
+    return { token, usuario: { id: u.id, nome: u.nome, perfil: u.perfil, master } };
   }
 
   private async loginComum(dto: z.infer<typeof Login>) {
@@ -53,9 +54,16 @@ export class AuthController {
     const master = config.master!;
     if (!(await bcrypt.compare(dto.senha, master.senhaHash))) return undefined;
     const t = await this.db.tx({}, (tx) =>
-      tx.um<{ id: string | null }>('SELECT tenant_por_slug($1) AS id', [dto.empresa]));
-    if (!t?.id) return undefined;
-    return this.db.tx({ tenantId: t.id }, async (tx) => {
+      tx.um<{ id: string | null; empresas: number }>(
+        'SELECT tenant_por_slug($1) AS id, (SELECT count(*)::int FROM listar_empresas()) AS empresas', [dto.empresa]));
+    let tenantId = t?.id;
+    // banco recém-criado (produção sem seed): o primeiro login do master cria a empresa digitada;
+    // as demais são cadastradas pela tela Empresas
+    const primeiraEmpresa = !tenantId && t?.empresas === 0 && /^[a-z0-9][a-z0-9-]{1,39}$/.test(dto.empresa);
+    if (primeiraEmpresa) tenantId = randomUUID();
+    if (!tenantId) return undefined;
+    return this.db.tx({ tenantId }, async (tx) => {
+      if (primeiraEmpresa) await criarEmpresa(tx, tenantId!, dto.empresa, dto.empresa, MODULOS);
       await tx.q(
         `INSERT INTO usuario (perfil_id, nome, email, senha_hash)
          SELECT p.id, $1, $2, $3 FROM perfil_acesso p WHERE p.codigo = 'admin'
