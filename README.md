@@ -34,6 +34,11 @@ docker compose up --build
 
 Para testar o check-in **no celular** na mesma rede Wi-Fi, troque `APP_URL` e `PUBLIC_API_URL` no `.env` pelo IP do computador (ex.: `http://192.168.0.10:3000`). Câmera e geolocalização exigem HTTPS fora de `localhost`, então o teste completo de campo deve ser feito no ambiente publicado.
 
+## Publicar (Supabase + Render + Vercel)
+
+Passo a passo, variáveis de ambiente e checklist em [docs/publicacao.md](docs/publicacao.md).
+A Vercel hospeda só o site (`apps/web`); a API (`apps/api`) e o banco ficam no Render e no Supabase.
+
 ## Rodar sem Docker
 
 ```bash

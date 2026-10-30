@@ -8,6 +8,10 @@ export const config = {
   porta: Number(process.env.PORT ?? 3001),
   // Usuário membro do papel app_api (sem BYPASSRLS). Nunca use o superusuário aqui.
   databaseUrl: obrigatorio('DATABASE_URL', 'postgres://sisevent_api:sisevent_api@localhost:5432/sisevent'),
+  // Banco gerenciado (Supabase, RDS...) exige SSL. DB_SSL=true liga a criptografia;
+  // o certificado do pooler não é de uma CA pública, por isso não é verificado.
+  // Não use ?sslmode= na DATABASE_URL junto com DB_SSL: o da URL prevalece.
+  dbSsl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : undefined,
   jwtSegredo: obrigatorio('JWT_SECRET', 'dev-inseguro-troque-isto'),
   jwtValidade: process.env.JWT_EXPIRES_IN ?? '12h',
   // URL pública do app web — usada para montar o link mágico e a URL do QR

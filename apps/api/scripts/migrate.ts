@@ -11,7 +11,8 @@ import { Client } from 'pg';
 async function main() {
   const url = process.env.DATABASE_URL_OWNER ?? process.env.DATABASE_URL;
   if (!url) throw new Error('Defina DATABASE_URL_OWNER');
-  const db = new Client({ connectionString: url });
+  // DB_SSL=true para banco gerenciado (Supabase): mesma regra da API em src/config.ts
+  const db = new Client({ connectionString: url, ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : undefined });
   await db.connect();
   await db.query(`CREATE TABLE IF NOT EXISTS schema_migracoes (arquivo text PRIMARY KEY, aplicado_em timestamptz NOT NULL DEFAULT now())`);
   const feitas = new Set((await db.query('SELECT arquivo FROM schema_migracoes')).rows.map((r) => r.arquivo));
