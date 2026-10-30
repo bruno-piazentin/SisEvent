@@ -1,4 +1,4 @@
-import { Body, Controller, ForbiddenException, Get, Param, Post, Put } from '@nestjs/common';
+import { Body, Controller, ForbiddenException, Get, Param, Post, Put, Inject } from '@nestjs/common';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 import { DbService, ContextoDb } from '../db/db.service';
@@ -30,7 +30,7 @@ const NovoUsuario = z.object({
  */
 @Controller('admin')
 export class AdminController {
-  constructor(private readonly db: DbService) {}
+  constructor(@Inject(DbService) private readonly db: DbService) {}
 
   private exigirAdmin(u: UsuarioLogado) {
     if (u.perfil !== 'admin') throw new ForbiddenException({ codigo: 'somente_admin' });

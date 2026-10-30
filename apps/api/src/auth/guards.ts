@@ -1,4 +1,4 @@
-import { CanActivate, ExecutionContext, ForbiddenException, Injectable, UnauthorizedException } from '@nestjs/common';
+import { CanActivate, ExecutionContext, ForbiddenException, Injectable, UnauthorizedException, Inject } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import jwt from 'jsonwebtoken';
 import { config } from '../config';
@@ -8,7 +8,7 @@ import { Acao, Modulo, PUBLICO, REQUER, UsuarioLogado } from './decorators';
 /** 1º guard: valida o JWT do usuário interno (exceto rotas @Publico). */
 @Injectable()
 export class AutenticacaoGuard implements CanActivate {
-  constructor(private readonly reflector: Reflector) {}
+  constructor(@Inject(Reflector) private readonly reflector: Reflector) {}
 
   canActivate(ctx: ExecutionContext): boolean {
     const publico = this.reflector.getAllAndOverride<boolean>(PUBLICO, [ctx.getHandler(), ctx.getClass()]);
@@ -33,7 +33,7 @@ export class AutenticacaoGuard implements CanActivate {
  */
 @Injectable()
 export class ModuloGuard implements CanActivate {
-  constructor(private readonly reflector: Reflector, private readonly db: DbService) {}
+  constructor(@Inject(Reflector) private readonly reflector: Reflector, @Inject(DbService) private readonly db: DbService) {}
 
   async canActivate(ctx: ExecutionContext): Promise<boolean> {
     const req = ctx.switchToHttp().getRequest();

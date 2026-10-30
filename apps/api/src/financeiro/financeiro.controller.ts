@@ -1,4 +1,4 @@
-import { Body, Controller, ForbiddenException, Get, Param, Patch, Post, Query, Req } from '@nestjs/common';
+import { Body, Controller, ForbiddenException, Get, Param, Patch, Post, Query, Req, Inject } from '@nestjs/common';
 import { z } from 'zod';
 import { DbService, ContextoDb } from '../db/db.service';
 import { Validar, uuid, dinheiro } from '../comum/validacao';
@@ -7,7 +7,7 @@ import { Ctx, Requer, Usuario, UsuarioLogado } from '../auth/decorators';
 /** M7 — Custo, fechamento, pagamento ao profissional, faturamento e margem */
 @Controller()
 export class FinanceiroController {
-  constructor(private readonly db: DbService) {}
+  constructor(@Inject(DbService) private readonly db: DbService) {}
 
   /** O que impede o fechamento (vagas abertas sem justificativa, convites sem resposta, checkout pendente) */
   @Get('eventos/:id/pendencias')

@@ -1,4 +1,4 @@
-import { Controller, ForbiddenException, Get, Injectable, Logger, OnModuleDestroy, OnModuleInit, Param, Post, Req, ServiceUnavailableException } from '@nestjs/common';
+import { Controller, ForbiddenException, Get, Injectable, Logger, OnModuleDestroy, OnModuleInit, Param, Post, Req, ServiceUnavailableException, Inject } from '@nestjs/common';
 import jwt from 'jsonwebtoken';
 import { DbService, ContextoDb } from '../db/db.service';
 import { Ctx, Requer, Usuario, UsuarioLogado } from '../auth/decorators';
@@ -12,7 +12,7 @@ import { config } from '../config';
  */
 @Controller('bi')
 export class BiController {
-  constructor(private readonly db: DbService) {}
+  constructor(@Inject(DbService) private readonly db: DbService) {}
 
   @Get('indicadores')
   @Requer('BI', 'ver')
@@ -79,10 +79,12 @@ export class BiController {
 export class BiAgendador implements OnModuleInit, OnModuleDestroy {
   private readonly log = new Logger('BI');
   private timer?: NodeJS.Timeout;
-  constructor(private readonly db: DbService) {}
+  constructor(@Inject(DbService) private readonly db: DbService) {}
 
   onModuleInit() {
-    if (!config.biIntervaloMin) return;
+    // Na Vercel a API roda como função: não fica viva entre requisições para um timer disparar.
+    // Lá a atualização é feita pelo botão do BI (POST /api/bi/atualizar) ou por um agendamento externo.
+    if (!config.biIntervaloMin || process.env.VERCEL) return;
     this.timer = setInterval(() => this.rodar(), config.biIntervaloMin * 60_000);
     this.timer.unref();
   }

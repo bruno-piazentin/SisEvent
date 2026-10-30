@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, Post, UnauthorizedException } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Post, UnauthorizedException, Inject } from '@nestjs/common';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { z } from 'zod';
@@ -15,7 +15,7 @@ const Login = z.object({
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly db: DbService) {}
+  constructor(@Inject(DbService) private readonly db: DbService) {}
 
   @Publico()
   @Post('login')

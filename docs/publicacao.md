@@ -11,6 +11,16 @@ O SisEvent tem três partes, e cada uma vai para um serviço:
 A Vercel publica **só o site**. Sem a API no ar, o site abre mas o login não funciona.
 Faça na ordem: banco → API → site.
 
+> **Alternativa: site e API juntos na Vercel (serviços).** O `vercel.json` da raiz declara dois serviços
+> no mesmo projeto: `web` (`apps/web`, público em `/`) e `api` (`apps/api`, público em `/api/*`).
+> Nesse modo, pule o passo 2 (Render). Na Vercel, importe o repositório **sem** mudar o Root Directory e
+> cadastre no projeto as variáveis da API do passo 2.3 (`DATABASE_URL`, `DB_SSL`, `JWT_SECRET`, `APP_URL`...).
+> `NEXT_PUBLIC_API_URL` não é necessária: o site usa `/api` no mesmo domínio, então também não há CORS.
+> Diferenças em relação ao Render: a API roda como função (sem processo contínuo), então a atualização
+> automática do BI a cada hora fica desligada (use o botão do BI ou um agendamento); o corpo de cada
+> requisição é limitado a 4,5 MB (as fotos já chegam reduzidas pelo navegador, em geral abaixo de 1 MB);
+> o pool usa 2 conexões por instância (`DB_POOL_MAX`).
+
 ---
 
 ## 1. Banco (Supabase)

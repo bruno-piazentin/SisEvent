@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Delete, Get, NotFoundException, Param, Patch, Post, Query, Req, Res } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Delete, Get, NotFoundException, Param, Patch, Post, Query, Req, Res, Inject } from '@nestjs/common';
 import type { Response } from 'express';
 import { z } from 'zod';
 import { DbService, ContextoDb } from '../db/db.service';
@@ -88,7 +88,7 @@ const FiltrosEvento = z.object({
 
 @Controller()
 export class EventosController {
-  constructor(private readonly db: DbService) {}
+  constructor(@Inject(DbService) private readonly db: DbService) {}
 
   @Get('eventos')
   @Requer('M4', 'ver')

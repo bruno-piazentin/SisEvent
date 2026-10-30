@@ -19,7 +19,8 @@ export class DbService implements OnModuleDestroy {
   private readonly log = new Logger('Db');
   readonly pool = new Pool({
     connectionString: config.databaseUrl,
-    max: Number(process.env.DB_POOL_MAX ?? 10),
+    // na Vercel cada instância da função abre o próprio pool: poucas conexões por instância
+    max: Number(process.env.DB_POOL_MAX ?? (process.env.VERCEL ? 2 : 10)),
     idleTimeoutMillis: 30_000,
     ssl: config.dbSsl,
   });

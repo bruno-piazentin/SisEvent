@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Inject } from '@nestjs/common';
 import { z } from 'zod';
 import { DbService, ContextoDb } from '../db/db.service';
 import { Validar, uuid } from '../comum/validacao';
@@ -22,7 +22,7 @@ const Ocorrencia = z.object({
 /** M6 — Execução em campo (tela do supervisor) */
 @Controller()
 export class CampoController {
-  constructor(private readonly db: DbService) {}
+  constructor(@Inject(DbService) private readonly db: DbService) {}
 
   /**
    * QR rotativo para exibir no celular/tablet do supervisor. A tela consulta a cada ~5 s.

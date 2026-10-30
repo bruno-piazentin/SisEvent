@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Delete, Get, NotFoundException, Param, Patch, Post, Put, Query, Req, Res } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Delete, Get, NotFoundException, Param, Patch, Post, Put, Query, Req, Res, Inject } from '@nestjs/common';
 import type { Response } from 'express';
 import { z } from 'zod';
 import { DbService, ContextoDb, Tx } from '../db/db.service';
@@ -102,7 +102,7 @@ const CAMPOS_SIMPLES = Object.keys(ProfissionalBase.shape).filter(
 
 @Controller('profissionais')
 export class ProfissionaisController {
-  constructor(private readonly db: DbService) {}
+  constructor(@Inject(DbService) private readonly db: DbService) {}
 
   /** Busca com filtros combinados (perfil + cidade + disponibilidade + nota + uniforme) */
   @Get()

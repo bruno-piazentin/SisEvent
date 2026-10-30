@@ -1,5 +1,5 @@
 import { BadRequestException, Body, ConflictException, Controller, Delete, Get, NotFoundException, Param, Patch, Post, Query,
-  ServiceUnavailableException } from '@nestjs/common';
+  ServiceUnavailableException, Inject } from '@nestjs/common';
 import { z } from 'zod';
 import { DbService, ContextoDb } from '../db/db.service';
 import { RedesSociais, Validar, uuid } from '../comum/validacao';
@@ -103,7 +103,7 @@ async function consultarCorreios(cep: string) {
 /** Cadastros de apoio: praças, funções e clientes (M3) */
 @Controller()
 export class CadastrosController {
-  constructor(private readonly db: DbService) {}
+  constructor(@Inject(DbService) private readonly db: DbService) {}
 
   // Praças e funções são consultadas por todos os módulos operacionais
   @Get('pracas')

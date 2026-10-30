@@ -1,4 +1,4 @@
-import { Body, Controller, Get, NotFoundException, Param, Patch, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, NotFoundException, Param, Patch, Post, Query, Inject } from '@nestjs/common';
 import { z } from 'zod';
 import { DbService, ContextoDb } from '../db/db.service';
 import { Validar, uuid } from '../comum/validacao';
@@ -18,7 +18,7 @@ const AtualizarAlocacao = z.object({
 /** M5 — Escala e alocação, com o cruzamento profissional × posto */
 @Controller()
 export class EscalaController {
-  constructor(private readonly db: DbService) {}
+  constructor(@Inject(DbService) private readonly db: DbService) {}
 
   /** Ranking de candidatos para o posto, com motivos e alertas */
   @Get('postos/:id/sugestoes')

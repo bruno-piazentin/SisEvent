@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, HttpException, Ip, Param, Post } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpException, Ip, Param, Post, Inject } from '@nestjs/common';
 import { z } from 'zod';
 import { DbService } from '../db/db.service';
 import { Validar, uuid } from '../comum/validacao';
@@ -35,7 +35,7 @@ setInterval(() => { const a = Date.now(); for (const [k, v] of tentativas) if (v
 @Publico()
 @Controller('publico')
 export class PublicoController {
-  constructor(private readonly db: DbService) {}
+  constructor(@Inject(DbService) private readonly db: DbService) {}
 
   @Get('p/:token')
   async area(@Param('token') token: string, @Ip() ip: string) {
