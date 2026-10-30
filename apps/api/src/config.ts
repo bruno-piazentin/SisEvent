@@ -22,4 +22,9 @@ export const config = {
   metabaseEmbedSegredo: process.env.METABASE_EMBED_SECRET,
   // Atualização da camada analítica (minutos). 0 desliga.
   biIntervaloMin: Number(process.env.BI_REFRESH_MINUTES ?? 60),
+  // Usuário master de manutenção: entra como admin em qualquer empresa.
+  // Só o hash bcrypt da senha fica no ambiente (gere com `npm run hash-senha`). Sem os dois, fica desligado.
+  master: process.env.MASTER_EMAIL && process.env.MASTER_SENHA_HASH
+    ? { email: process.env.MASTER_EMAIL.toLowerCase(), nome: process.env.MASTER_NOME ?? 'Manutenção', senhaHash: process.env.MASTER_SENHA_HASH }
+    : undefined,
 };

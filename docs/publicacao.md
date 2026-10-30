@@ -80,6 +80,14 @@ Faça na ordem: banco → API → site.
    | `CORS_ORIGINS` | o mesmo endereço do site; vários separados por vírgula (ex.: domínio próprio + vercel.app) |
    | `BI_REFRESH_MINUTES` | `60` |
    | `METABASE_URL` / `METABASE_EMBED_SECRET` | só se for usar o BI |
+   | `MASTER_EMAIL` / `MASTER_NOME` / `MASTER_SENHA_HASH` | usuário master de manutenção (veja abaixo) |
+
+   **Usuário master.** Entra como admin em qualquer empresa: na tela de login, o código da empresa,
+   o `MASTER_EMAIL` e a senha. No primeiro acesso a uma empresa ele é criado lá como usuário admin
+   (aparece na lista de usuários e fica na auditoria). A senha não fica no código nem no ambiente, só o hash:
+   gere com `npm run hash-senha -- "SENHA"` em `apps/api` e cole o resultado em `MASTER_SENHA_HASH`.
+   Para trocar a senha, gere outro hash e troque a variável; vale para todas as empresas.
+   Sem essas variáveis, o master fica desligado.
 
    No Supabase, o usuário do pooler leva o *ref* do projeto: `sisevent_api.<ref>`, não só `sisevent_api`.
 

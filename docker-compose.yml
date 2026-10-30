@@ -38,6 +38,9 @@ services:
       METABASE_URL: ${METABASE_PUBLIC_URL:-http://localhost:3002}
       METABASE_EMBED_SECRET: ${METABASE_EMBED_SECRET:-}
       BI_REFRESH_MINUTES: ${BI_REFRESH_MINUTES:-60}
+      MASTER_EMAIL: ${MASTER_EMAIL:-}
+      MASTER_NOME: ${MASTER_NOME:-Manutenção}
+      MASTER_SENHA_HASH: ${MASTER_SENHA_HASH:-}
       NODE_ENV: production
     ports: ["3001:3001"]
 

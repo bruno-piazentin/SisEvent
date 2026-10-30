@@ -9,6 +9,7 @@
     "dev": "tsx watch src/main.ts",
     "migrate": "tsx scripts/migrate.ts",
     "seed": "tsx scripts/migrate.ts --seed",
+    "hash-senha": "tsx scripts/hash-senha.ts",
     "test:db": "psql \"$DATABASE_URL\" -v ON_ERROR_STOP=1 -f db/tests/regras_negocio.sql",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
