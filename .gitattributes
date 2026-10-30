@@ -1,0 +1,9 @@
+# Quebras de linha no padrão Linux (LF) no repositório e na cópia de trabalho:
+# Dockerfile, scripts .sh e SQL rodam em containers Linux.
+* text=auto eol=lf
+
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.webp binary
+*.ico  binary

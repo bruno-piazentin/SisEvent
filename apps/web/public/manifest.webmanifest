@@ -1,0 +1,13 @@
+{
+  "name": "SisEvent — Rafa Dutra Eventos",
+  "short_name": "SisEvent",
+  "description": "Convocações e check-in dos eventos",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f6f5f3",
+  "theme_color": "#5b2a86",
+  "lang": "pt-BR",
+  "icons": [
+    { "src": "/icone.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
