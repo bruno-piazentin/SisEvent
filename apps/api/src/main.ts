@@ -13,6 +13,17 @@ async function iniciar() {
   app.enableCors({ origin: config.corsOrigens, credentials: true });
   // atrás de proxy/CDN (Vercel, load balancer): IP real para o rate limit da área pública
   app.getHttpAdapter().getInstance().set('trust proxy', 1);
+  // cabeçalhos de segurança: a API só devolve JSON, nunca é aberta dentro de outro site nem guardada em cache
+  app.use((_req: unknown, res: any, next: () => void) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('Content-Security-Policy', "default-src 'none'; frame-ancestors 'none'");
+    res.setHeader('Referrer-Policy', 'no-referrer');
+    res.setHeader('Cache-Control', 'no-store');
+    if (process.env.NODE_ENV === 'production') res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+    next();
+  });
+  app.getHttpAdapter().getInstance().disable('x-powered-by');
   app.enableShutdownHooks();
   await app.listen(config.porta);
   new Logger('SisEvent').log(`API ouvindo em http://localhost:${config.porta}/api`);

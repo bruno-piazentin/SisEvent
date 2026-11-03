@@ -36,7 +36,10 @@ function Conteudo() {
 
   return (
     <>
-      <div className="topo"><h1>Financeiro</h1></div>
+      <div className="topo">
+        <h1>Financeiro</h1>
+        {pode('M7', 'ver_valores') && <Link className="btn" href="/financeiro/relatorio">Relatório</Link>}
+      </div>
 
       {margem && (
         <div className="grade g2" style={{ marginBottom: 16 }}>
@@ -72,7 +75,7 @@ function Conteudo() {
       <section className="cartao">
         <div className="topo" style={{ marginBottom: 8 }}>
           <h2>Pagamentos pendentes</h2>
-          {pode('M7', 'aprovar') && <button className="btn primario" disabled={!selecionados.length} onClick={gerarLote}>
+          {pode('M7', 'aprovar') && pode('DP') && <button className="btn primario" disabled={!selecionados.length} onClick={gerarLote}>
             Gerar lote PIX ({selecionados.length}) {selecionados.length > 0 && fmt.moeda(totalSel)}</button>}
         </div>
         {lote && <div className="aviso ok" style={{ marginBottom: 10 }}>Lote com {lote.quantidade} pagamento(s), total {fmt.moeda(lote.total)}. <button className="btn pequeno" onClick={baixarCsv}>Baixar CSV</button></div>}
@@ -83,7 +86,7 @@ function Conteudo() {
               <tr key={p.id}>
                 <td style={{ width: 30 }}><input type="checkbox" style={{ width: 'auto' }} checked={selecionados.includes(p.id)}
                   onChange={(e) => setSelecionados((s) => (e.target.checked ? [...s, p.id] : s.filter((x) => x !== p.id)))} /></td>
-                <td>{p.profissional}<div className="suave pequeno">{p.forma_contratacao ?? '—'} · PIX {p.chave_pix ?? 'não cadastrado'}</div></td>
+                <td>{p.profissional}<div className="suave pequeno">{p.forma_contratacao ?? '—'}{'chave_pix' in p && ` · PIX ${p.chave_pix ?? 'não cadastrado'}`}</div></td>
                 <td className="pequeno">{p.evento}<div className="suave">{fmt.data(p.data_evento)}</div></td>
                 <td><strong>{fmt.moeda(p.valor)}</strong></td>
               </tr>

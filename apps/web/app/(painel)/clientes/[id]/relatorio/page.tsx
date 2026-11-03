@@ -3,7 +3,7 @@ import { use, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { api, fmt } from '@/lib/api';
 import { baixarCsv, COR_STATUS, enderecoCompleto, mascara, NOME_TIPO_CLIENTE, nomeColaborador } from '@/lib/ui';
-import { ExigeModulo, usePainel } from '@/components/Painel';
+import { ExigeModulo, usePainel, Voltar } from '@/components/Painel';
 import { redesEmTexto } from '@/components/RedesSociais';
 
 const situacao = (s: string) => (s === 'fechado' ? 'Fechado / finalizado' : s === 'cancelado' ? 'Cancelado' : 'Em aberto');
@@ -44,6 +44,7 @@ function Relatorio({ id }: { id: string }) {
 
   return (
     <div className="relatorio">
+      <Voltar para={`/clientes/${id}`} />
       <div className="topo nao-imprimir">
         <div><div className="suave pequeno"><Link href="/clientes">Clientes</Link> / <Link href={`/clientes/${id}`}>{nome}</Link> / Relatório</div>
           <h1>Relatório do cliente</h1></div>

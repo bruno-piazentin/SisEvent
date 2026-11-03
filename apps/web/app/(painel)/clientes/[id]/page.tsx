@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { api, fmt } from '@/lib/api';
 import { COR_STATUS, documentoCliente, enderecoCompleto, mascara, NOME_TIPO_CLIENTE } from '@/lib/ui';
-import { ExigeModulo, usePainel } from '@/components/Painel';
+import { ExigeModulo, usePainel, Voltar } from '@/components/Painel';
 import { Confirmar } from '@/components/Confirmar';
 import { Ocorrencias } from '@/components/Ocorrencias';
 import { LinksRedesSociais } from '@/components/RedesSociais';
@@ -46,6 +46,7 @@ function Cliente({ id }: { id: string }) {
 
   return (
     <>
+      <Voltar para="/clientes" />
       <div className="topo">
         <div>
           <div className="suave pequeno"><Link href="/clientes">Clientes</Link> / {c.nome_fantasia ?? c.razao_social}</div>
@@ -98,7 +99,7 @@ function Cliente({ id }: { id: string }) {
             <h2>Dados cadastrais</h2>
             <table>
               <tbody>
-                <tr><td className="suave">{c.pessoa === 'fisica' ? 'CPF' : 'CNPJ'}</td><td>{c.pessoa === 'fisica' ? (c.cpf ? mascara.cpf(c.cpf) : '—') : (c.cnpj ? mascara.cnpj(c.cnpj) : '—')}</td></tr>
+                {!(c.pessoa === 'fisica' && c.ocultos?.includes('cpf')) && <tr><td className="suave">{c.pessoa === 'fisica' ? 'CPF' : 'CNPJ'}</td><td>{c.pessoa === 'fisica' ? (c.cpf ? mascara.cpf(c.cpf) : '—') : (c.cnpj ? mascara.cnpj(c.cnpj) : '—')}</td></tr>}
                 <tr><td className="suave">Status</td><td>{c.ativo ? 'Ativo' : 'Inativo'}{c.status_alterado_em && <span className="suave pequeno"> · desde {fmt.data(c.status_alterado_em)}{c.status_alterado_por && ` por ${c.status_alterado_por}`}</span>}</td></tr>
                 <tr><td className="suave">Marcas</td><td>{c.marcas.length ? (
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>{c.marcas.map((m: string) => <span key={m} className="etiqueta">{m}</span>)}</div>

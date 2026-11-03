@@ -2,9 +2,10 @@ import { BadRequestException, Body, Controller, Delete, Get, NotFoundException, 
 import type { Response } from 'express';
 import { z } from 'zod';
 import { DbService, ContextoDb, Tx } from '../db/db.service';
-import { RedesSociais, Validar, uuid } from '../comum/validacao';
+import { RedesSociais, Validar, alturaCm, celular, inteiro, uuid } from '../comum/validacao';
 import { Ctx, Requer } from '../auth/decorators';
 import { config } from '../config';
+import { CIFRADOS_PROFISSIONAL, cifrarCampos, decifrarCampos, indice } from '../comum/cripto';
 
 const MEIOS = ['carro_proprio', 'moto_propria', 'transporte_publico', 'aplicativo', 'bicicleta', 'a_pe', 'carona'] as const;
 const TAMANHOS = ['PP', 'P', 'M', 'G', 'GG', 'XG', 'XGG'] as const;
@@ -33,7 +34,7 @@ const ProfissionalBase = z.object({
   data_nascimento: z.coerce.date().nullish(),
   genero: z.string().nullish(),
   foto_url: z.string().url().nullish(),
-  celular: z.string().regex(/^\+\d{12,13}$/, 'Celular no formato +5543999990000'),
+  celular,
   email: z.string().email().nullish(),
   redes_sociais: RedesSociais.optional(),
   cidade: z.string().nullish(),
@@ -41,15 +42,15 @@ const ProfissionalBase = z.object({
   bairro: z.string().nullish(),
   cep: z.string().nullish(),
   praca_base_id: uuid.nullish(),
-  raio_km: z.number().int().min(0).max(1000).nullish(),
-  altura_cm: z.number().int().min(100).max(230).nullish(),
+  raio_km: inteiro().pipe(z.number().min(0).max(1000)).nullish(),
+  altura_cm: alturaCm.nullish(),
   peso_kg: z.number().positive().nullish(),
-  manequim: z.number().int().nullish(),
+  manequim: inteiro().nullish(),
   tamanho_camiseta: z.enum(TAMANHOS).nullish(),
-  calcado: z.number().int().nullish(),
-  busto_cm: z.number().int().nullish(),
-  cintura_cm: z.number().int().nullish(),
-  quadril_cm: z.number().int().nullish(),
+  calcado: inteiro().nullish(),
+  busto_cm: inteiro().nullish(),
+  cintura_cm: inteiro().nullish(),
+  quadril_cm: inteiro().nullish(),
   tipo_cabelo: z.enum(TIPOS_CABELO).nullish(),
   cor_cabelo: z.enum(CORES_CABELO).nullish(),
   cor_olhos: z.string().nullish(),
@@ -99,6 +100,17 @@ const Filtros = z.object({
 const CAMPOS_SIMPLES = Object.keys(ProfissionalBase.shape).filter(
   (k) => !['funcoes', 'pracas_aceitas', 'disponibilidade'].includes(k),
 );
+const CAMPOS_GRAVADOS = [...CAMPOS_SIMPLES, 'cpf_hash'];
+
+/** Dados pessoais: só quem tem a permissão DP vê ou altera (para os demais o campo não existe) */
+const DADOS_PESSOAIS = ['cpf', 'rg', 'data_nascimento', 'chave_pix', 'tipo_chave_pix', 'banco', 'agencia', 'conta', 'cnpj_mei'];
+
+/** Antes de gravar: descarta os dados pessoais de quem não tem a permissão e criptografa os demais */
+async function prepararDadosPessoais(dto: any, req: any) {
+  if (!(await req.podeDadosPessoais())) for (const k of DADOS_PESSOAIS) delete dto[k];
+  if (dto.cpf !== undefined) dto.cpf_hash = indice(dto.cpf);
+  cifrarCampos(dto, CIFRADOS_PROFISSIONAL);
+}
 
 @Controller('profissionais')
 export class ProfissionaisController {
@@ -170,19 +182,14 @@ export class ProfissionaisController {
   @Requer('M1', 'ver')
   async detalhe(@Ctx() ctx: ContextoDb, @Param('id') id: string, @Req() req: any) {
     uuid.parse(id);
-    const verDadosSensiveis = await req.pode('M1', 'editar');
-    const verFinanceiro = await req.pode('M7', 'ver_valores');
+    const verDadosPessoais = await req.podeDadosPessoais();
     return this.db.tx(ctx, async (tx) => {
       // arrays de enum voltam como texto cru no driver pg: converte para text[]
       const pr = await tx.um('SELECT *, meios_locomocao::text[] AS meios_locomocao FROM profissional WHERE id = $1', [id]);
       if (!pr) throw new NotFoundException();
-      if (!verDadosSensiveis) {
-        pr.cpf = pr.cpf ? `***.***.***-${pr.cpf.slice(-2)}` : null;
-        pr.rg = pr.rg ? '***' : null;
-      }
-      if (!verFinanceiro) {
-        for (const k of ['chave_pix', 'banco', 'agencia', 'conta', 'cnpj_mei']) pr[k] = pr[k] ? '***' : null;
-      }
+      delete pr.cpf_hash;
+      if (verDadosPessoais) decifrarCampos(pr, CIFRADOS_PROFISSIONAL);
+      else { for (const k of DADOS_PESSOAIS) delete pr[k]; pr.ocultos = DADOS_PESSOAIS; }
       const [funcoes, pracas, disponibilidade, documentos, historico, avaliacoes] = await Promise.all([
         tx.q(`SELECT f.id AS funcao_id, f.nome, pf.nivel FROM profissional_funcao pf JOIN funcao f ON f.id = pf.funcao_id
                WHERE pf.profissional_id = $1 ORDER BY f.nome`, [id]),
@@ -204,9 +211,10 @@ export class ProfissionaisController {
 
   @Post()
   @Requer('M1', 'criar')
-  criar(@Ctx() ctx: ContextoDb, @Body(new Validar(NovoProfissional)) dto: z.infer<typeof NovoProfissional>) {
+  async criar(@Ctx() ctx: ContextoDb, @Req() req: any, @Body(new Validar(NovoProfissional)) dto: z.infer<typeof NovoProfissional>) {
+    await prepararDadosPessoais(dto, req);
     return this.db.tx(ctx, async (tx) => {
-      const campos = CAMPOS_SIMPLES.filter((k) => (dto as any)[k] !== undefined);
+      const campos = CAMPOS_GRAVADOS.filter((k) => (dto as any)[k] !== undefined);
       const valores = campos.map((k) => (dto as any)[k]);
       const pr = await tx.um<{ id: string }>(
         `INSERT INTO profissional (${campos.join(', ')}) VALUES (${campos.map((_, i) => `$${i + 1}`).join(', ')})
@@ -220,10 +228,11 @@ export class ProfissionaisController {
 
   @Patch(':id')
   @Requer('M1', 'editar')
-  editar(@Ctx() ctx: ContextoDb, @Param('id') id: string, @Body(new Validar(EditarProfissional)) dto: z.infer<typeof EditarProfissional>) {
+  async editar(@Ctx() ctx: ContextoDb, @Req() req: any, @Param('id') id: string, @Body(new Validar(EditarProfissional)) dto: z.infer<typeof EditarProfissional>) {
     uuid.parse(id);
+    await prepararDadosPessoais(dto, req);
     return this.db.tx(ctx, async (tx) => {
-      const campos = CAMPOS_SIMPLES.filter((k) => (dto as any)[k] !== undefined);
+      const campos = CAMPOS_GRAVADOS.filter((k) => (dto as any)[k] !== undefined);
       if (campos.length) {
         const r = await tx.um(
           `UPDATE profissional SET ${campos.map((k, i) => `${k} = $${i + 2}`).join(', ')} WHERE id = $1 RETURNING id`,
@@ -248,7 +257,8 @@ export class ProfissionaisController {
   @Post(':id/avaliacoes')
   @Requer('M5', 'editar')
   avaliar(@Ctx() ctx: ContextoDb, @Param('id') _id: string,
-          @Body(new Validar(z.object({ alocacao_id: uuid, nota: z.number().int().min(1).max(5), observacao: z.string().nullish() })))
+          @Body(new Validar(z.object({ alocacao_id: uuid, nota: z.number().int().min(1).max(5), observacao: z.string().trim().nullish() })
+            .refine((a) => a.nota > 1 || (a.observacao ?? '').length >= 10, { message: 'Para a nota 1, conte o que motivou a nota.', path: ['observacao'] })))
           dto: { alocacao_id: string; nota: number; observacao?: string | null }) {
     return this.db.tx(ctx, (tx) =>
       tx.um(
@@ -271,9 +281,9 @@ export class ProfissionaisController {
     uuid.parse(id);
     return this.db.tx(ctx, async (tx) => {
       const r = await tx.um<{ token: string }>(`SELECT gerar_acesso_profissional($1, '30 days') AS token`, [id]);
-      const pr = await tx.um('SELECT nome, celular FROM profissional WHERE id = $1', [id]);
+      const pr = await tx.um(`SELECT p.nome, p.celular, t.nome AS empresa FROM profissional p JOIN tenant t ON t.id = p.tenant_id WHERE p.id = $1`, [id]);
       const link = `${config.appUrl}/p/${r!.token}`;
-      const mensagem = `Olá, ${pr.nome.split(' ')[0]}! Este é seu acesso à Rafa Dutra Eventos: ${link}\n` +
+      const mensagem = `Olá, ${pr.nome.split(' ')[0]}! Este é seu acesso à ${pr.empresa}: ${link}\n` +
         `Por ele você confirma convocações e faz check-in nos eventos. Não compartilhe.`;
       return {
         link,

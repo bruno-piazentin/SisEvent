@@ -1,9 +1,10 @@
 'use client';
-import { Suspense, use, useCallback, useEffect, useState } from 'react';
+import { Fragment, Suspense, use, useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { api, fmt } from '@/lib/api';
 import { COR_STATUS } from '@/lib/ui';
-import { ExigeModulo, usePainel } from '@/components/Painel';
+import { ExigeModulo, usePainel, Voltar } from '@/components/Painel';
+import { FormAvaliacao, SeloNota } from '@/components/Avaliacao';
 import { LocalEvento } from '@/components/LocalEvento';
 import { useSearchParams } from 'next/navigation';
 
@@ -36,6 +37,7 @@ function Evento({ id }: { id: string }) {
 
   return (
     <>
+      <Voltar para="/eventos" />
       <div className="topo">
         <div>
           <div className="suave pequeno"><Link href="/eventos">Eventos</Link> / {ev.cliente}</div>
@@ -43,6 +45,7 @@ function Evento({ id }: { id: string }) {
           <div className="suave">{ev.local_nome} · {ev.praca} {ev.marca && `· ${ev.marca}`}</div>
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <Link className="btn" href={`/eventos/${id}/relatorio`}>Relatório</Link>
           {pode('M4', 'criar') && <ClonarEvento id={id} />}
           {pode('M6') && <a className="btn campo" href={`/qr/${id}`} target="_blank" rel="noreferrer">Abrir QR de check-in</a>}
         </div>
@@ -266,11 +269,16 @@ function Presenca({ id }: { id: string }) {
 }
 
 /* ------------------------------------------------------------------ */
+const NOME_PENDENCIA: Record<string, string> = {
+  vaga_aberta: 'vaga aberta', convite_sem_resposta: 'convite sem resposta', checkout_pendente: 'check-out pendente', avaliacao_pendente: 'avaliação pendente',
+};
+
 function Fechamento({ ev, aoMudar }: { ev: any; aoMudar: () => void }) {
   const { pode } = usePainel();
   const [pend, setPend] = useState<any[]>([]);
   const [res, setRes] = useState<any>(null);
   const [erro, setErro] = useState('');
+  const [avaliar, setAvaliar] = useState<string | null>(null);   // alocação com o formulário de nota aberto
 
   const carregar = useCallback(async () => {
     setPend(await api(`/eventos/${ev.id}/pendencias`));
@@ -321,18 +329,24 @@ function Fechamento({ ev, aoMudar }: { ev: any; aoMudar: () => void }) {
             </tbody>
           </table>
         </section>
+        <AvaliacoesEquipe ev={ev} aberta={avaliar} onAbrir={setAvaliar} onMudou={carregar} />
       </div>
     );
   }
 
   return (
+    <>
     <section className="cartao">
       <h2>Pendências para fechar</h2>
       {pend.length === 0 ? <div className="aviso ok">Nenhuma pendência. O evento pode ser fechado.</div> : (
         <table><tbody>
           {pend.map((p, i) => (
-            <tr key={i}><td><span className="etiqueta alerta">{p.tipo.replaceAll('_', ' ')}</span></td><td>{p.descricao}</td>
-              <td>{p.tipo === 'vaga_aberta' && pode('M4', 'editar') && <button className="btn pequeno" onClick={() => justificar(p.referencia)}>Justificar</button>}</td></tr>
+            <tr key={i}><td><span className="etiqueta alerta">{NOME_PENDENCIA[p.tipo] ?? p.tipo.replaceAll('_', ' ')}</span></td><td>{p.descricao}</td>
+              <td>{p.tipo === 'vaga_aberta' && pode('M4', 'editar') && <button className="btn pequeno" onClick={() => justificar(p.referencia)}>Justificar</button>}
+                {p.tipo === 'avaliacao_pendente' && pode('M5', 'editar') && <button className="btn pequeno" onClick={() => {
+                  setAvaliar(p.referencia);
+                  setTimeout(() => document.getElementById(`aval-${p.referencia}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50);
+                }}>Avaliar</button>}</td></tr>
           ))}
         </tbody></table>
       )}
@@ -346,6 +360,70 @@ function Fechamento({ ev, aoMudar }: { ev: any; aoMudar: () => void }) {
             <p className="suave pequeno">Quem ficou sem check-out será calculado até o fim do turno.</p>}
         </div>
       )}
+    </section>
+    <AvaliacoesEquipe ev={ev} aberta={avaliar} onAbrir={setAvaliar} onMudou={carregar} />
+    </>
+  );
+}
+
+/**
+ * Avaliação obrigatória de quem trabalhou (fez check-in): o evento só fecha com todos avaliados.
+ * Ao lado, a nota que cada profissional deu ao evento no check-out.
+ */
+function AvaliacoesEquipe({ ev, aberta, onAbrir, onMudou }: {
+  ev: any; aberta: string | null; onAbrir: (id: string | null) => void; onMudou: () => void;
+}) {
+  const { pode } = usePainel();
+  const [lista, setLista] = useState<any[] | null>(null);
+  const carregar = useCallback(() => api<any[]>(`/eventos/${ev.id}/avaliacoes`).then(setLista), [ev.id]);
+  useEffect(() => { carregar(); }, [carregar]);
+
+  if (!lista || lista.length === 0) return null;
+  const faltam = lista.filter((a) => !a.nota).length;
+
+  return (
+    <section className="cartao" style={{ marginTop: 16 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
+        <h2>Avaliação dos profissionais</h2>
+        {faltam > 0 ? <span className="etiqueta alerta">{faltam} sem nota</span> : <span className="etiqueta ok">todos avaliados</span>}
+      </div>
+      <p className="suave pequeno" style={{ marginTop: 0 }}>
+        A nota é obrigatória para quem trabalhou: o evento só fecha com todos avaliados. Ela entra na nota média e na sugestão de profissionais.
+      </p>
+      <div className="tabela"><table>
+        <thead><tr><th>Profissional</th><th>Nota da empresa</th><th>Nota dele para o evento</th><th></th></tr></thead>
+        <tbody>
+          {lista.map((a) => (
+            <Fragment key={a.alocacao_id}>
+              <tr id={`aval-${a.alocacao_id}`}>
+                <td>{a.profissional}<div className="suave pequeno">{a.funcao} · {a.turno} · {fmt.hora(a.checkin_em)}{a.checkout_em ? `–${fmt.hora(a.checkout_em)}` : ' (sem saída)'}</div></td>
+                <td><SeloNota nota={a.nota} />
+                  {a.observacao && <div className="pequeno" style={{ marginTop: 4 }}>“{a.observacao}”</div>}
+                  {a.avaliado_por && <div className="suave pequeno">por {a.avaliado_por}</div>}</td>
+                <td>{a.nota_evento ? <SeloNota nota={a.nota_evento} /> : <span className="suave pequeno">{a.checkout_em ? 'ainda não avaliou' : 'sem check-out'}</span>}
+                  {a.comentario_evento && <div className="pequeno" style={{ marginTop: 4 }}>“{a.comentario_evento}”</div>}</td>
+                <td style={{ textAlign: 'right' }}>
+                  {pode('M5', 'editar') && aberta !== a.alocacao_id &&
+                    <button className={`btn pequeno ${a.nota ? '' : 'primario'}`} onClick={() => onAbrir(a.alocacao_id)}>{a.nota ? 'Alterar' : 'Avaliar'}</button>}
+                </td>
+              </tr>
+              {aberta === a.alocacao_id && (
+                <tr><td colSpan={4} style={{ background: 'var(--bg)' }}>
+                  <div style={{ maxWidth: 560, padding: '6px 0' }}>
+                    <div style={{ fontWeight: 600, marginBottom: 8 }}>Como foi o trabalho de {a.profissional}?</div>
+                    <FormAvaliacao sobre={`o trabalho de ${a.profissional.split(' ')[0]}`} inicial={{ nota: a.nota, comentario: a.observacao }}
+                      onCancelar={() => onAbrir(null)}
+                      onEnviar={async (nota, comentario) => {
+                        await api(`/alocacoes/${a.alocacao_id}/avaliacao`, { method: 'PUT', json: { nota, comentario } });
+                        onAbrir(null); await carregar(); onMudou();
+                      }} />
+                  </div>
+                </td></tr>
+              )}
+            </Fragment>
+          ))}
+        </tbody>
+      </table></div>
     </section>
   );
 }

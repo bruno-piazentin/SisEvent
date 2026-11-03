@@ -2,11 +2,10 @@
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import Link from 'next/link';
-import { CampoRedesSociais } from './RedesSociais';
-import { mascara, NOME_TIPO_CLIENTE, soDigitos } from '@/lib/ui';
+import { CAMPOS_CADASTRO, CamposContato, CamposEndereco, CamposIdentificacao, CamposRedes, corpoCadastro } from './CamposCadastro';
+import { NOME_TIPO_CLIENTE, soDigitos } from '@/lib/ui';
 
-const CAMPOS = ['pessoa', 'razao_social', 'nome_fantasia', 'cnpj', 'cpf', 'tipo', 'prazo_pagamento_dias', 'telefone', 'email', 'redes_sociais',
-  'cep', 'logradouro', 'numero', 'complemento', 'bairro', 'cidade', 'uf'];
+const CAMPOS = [...CAMPOS_CADASTRO, 'tipo', 'prazo_pagamento_dias'];
 
 const chave = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^\p{L}\p{N}]+/gu, ' ').trim().toLowerCase();
 
@@ -70,36 +69,12 @@ export function FormCliente({ inicial, onSalvo, onCancelar }: { inicial?: any; o
   const [marcas, setMarcas] = useState<string[]>(inicial?.marcas ?? []);
   const [erro, setErro] = useState('');
   const [excluido, setExcluido] = useState(false);
-  const [cepMsg, setCepMsg] = useState('');
-  const [buscando, setBuscando] = useState(false);
   const [salvando, setSalvando] = useState(false);
   const set = (k: string, v: unknown) => setC((x: any) => ({ ...x, [k]: v }));
 
-  async function buscarCep(valor: string) {
-    const cep = soDigitos(valor);
-    if (cep.length !== 8) return;
-    setBuscando(true); setCepMsg('');
-    try {
-      const r = await api(`/cep/${cep}`);
-      setC((x: any) => ({ ...x, cep, logradouro: r.logradouro ?? '', bairro: r.bairro ?? '', cidade: r.cidade, uf: r.uf }));
-      setCepMsg('Endereço preenchido pelo CEP. Complete o número.');
-    } catch (e: any) {
-      setCepMsg(e.message);
-    } finally { setBuscando(false); }
-  }
-
   async function salvar(e: React.FormEvent) {
     e.preventDefault(); setErro(''); setSalvando(true);
-    const corpo: any = {};
-    for (const k of CAMPOS) {
-      const v = typeof c[k] === 'string' ? c[k].trim() : c[k];
-      corpo[k] = v === '' || v === undefined ? null : v;
-    }
-    corpo.pessoa = corpo.pessoa ?? 'juridica';
-    // pessoa física não tem CNPJ e jurídica não tem CPF
-    corpo.cnpj = corpo.pessoa === 'juridica' ? soDigitos(corpo.cnpj) || null : null;
-    corpo.cpf = corpo.pessoa === 'fisica' ? soDigitos(corpo.cpf) || null : null;
-    corpo.cep = soDigitos(corpo.cep) || null;
+    const corpo = corpoCadastro(c, CAMPOS);
     corpo.prazo_pagamento_dias = Number(corpo.prazo_pagamento_dias ?? 30);
     corpo.tipo = corpo.tipo ?? 'outro';
     corpo.marcas = marcas;
@@ -120,49 +95,16 @@ export function FormCliente({ inicial, onSalvo, onCancelar }: { inicial?: any; o
     <form className="cartao form" style={{ marginBottom: 16 }} onSubmit={salvar}>
       <h2 style={{ margin: 0 }}>{inicial?.id ? 'Editar cliente' : 'Novo cliente'}</h2>
 
-      <div role="radiogroup" aria-label="Tipo de pessoa" style={{ display: 'flex', gap: 6 }}>
-        {([['juridica', 'Pessoa jurídica (CNPJ)'], ['fisica', 'Pessoa física (CPF)']] as const).map(([v, rotulo]) => (
-          <button key={v} type="button" role="radio" aria-checked={(c.pessoa ?? 'juridica') === v}
-                  className={`btn pequeno ${(c.pessoa ?? 'juridica') === v ? 'primario' : ''}`} onClick={() => set('pessoa', v)}>{rotulo}</button>
-        ))}
-      </div>
-
-      <div className="suave pequeno" style={{ fontWeight: 600 }}>{fisica ? 'Dados da pessoa' : 'Dados da empresa'}</div>
-      <div className="linha">
-        <label>{fisica ? 'Nome completo *' : 'Razão social *'}<input required value={c.razao_social ?? ''} onChange={(e) => set('razao_social', e.target.value)} /></label>
-        <label>{fisica ? 'Como é chamado(a)' : 'Nome fantasia'}<input value={c.nome_fantasia ?? ''} onChange={(e) => set('nome_fantasia', e.target.value)} /></label>
-        {fisica
-          ? <label>CPF<input key="cpf" inputMode="numeric" placeholder="000.000.000-00" value={mascara.cpf(c.cpf)} onChange={(e) => set('cpf', soDigitos(e.target.value))} /></label>
-          : <label>CNPJ<input key="cnpj" inputMode="numeric" placeholder="00.000.000/0000-00" value={mascara.cnpj(c.cnpj)} onChange={(e) => set('cnpj', soDigitos(e.target.value))} /></label>}
+      <CamposIdentificacao c={c} set={set}>
         <label>Tipo<select value={c.tipo} onChange={(e) => set('tipo', e.target.value)}>
           {Object.entries(NOME_TIPO_CLIENTE).map(([v, n]) => <option key={v} value={v}>{n}</option>)}</select></label>
-      </div>
+      </CamposIdentificacao>
       <CampoMarcas marcas={marcas} onChange={setMarcas} />
-      <div className="linha">
-        <label>Telefone<input inputMode="tel" placeholder="(00) 00000-0000" value={mascara.telefone(c.telefone)} onChange={(e) => set('telefone', mascara.telefone(e.target.value))} /></label>
-        <label>{fisica ? 'E-mail' : 'E-mail da empresa'}<input type="email" placeholder={fisica ? 'nome@email.com.br' : 'contato@empresa.com.br'} value={c.email ?? ''} onChange={(e) => set('email', e.target.value)} /></label>
+      <CamposContato c={c} set={set}>
         <label>Prazo de pagamento (dias)<input type="number" min={0} max={180} value={c.prazo_pagamento_dias ?? 30} onChange={(e) => set('prazo_pagamento_dias', e.target.value)} /></label>
-      </div>
-
-      <div className="suave pequeno" style={{ fontWeight: 600 }}>Redes sociais</div>
-      <CampoRedesSociais valor={c.redes_sociais} onChange={(v) => set('redes_sociais', v)} />
-
-      <div className="suave pequeno" style={{ fontWeight: 600 }}>Endereço</div>
-      <div className="linha">
-        <label>CEP{buscando && <span className="suave"> · buscando…</span>}
-          <input inputMode="numeric" placeholder="00000-000" value={mascara.cep(c.cep)}
-                 onChange={(e) => { const v = soDigitos(e.target.value); set('cep', v); if (v.length === 8) buscarCep(v); }} />
-        </label>
-        <label>Logradouro<input value={c.logradouro ?? ''} onChange={(e) => set('logradouro', e.target.value)} /></label>
-        <label>Número<input value={c.numero ?? ''} onChange={(e) => set('numero', e.target.value)} /></label>
-        <label>Complemento<input value={c.complemento ?? ''} onChange={(e) => set('complemento', e.target.value)} /></label>
-      </div>
-      <div className="linha">
-        <label>Bairro<input value={c.bairro ?? ''} onChange={(e) => set('bairro', e.target.value)} /></label>
-        <label>Cidade<input value={c.cidade ?? ''} onChange={(e) => set('cidade', e.target.value)} /></label>
-        <label>UF<input maxLength={2} value={c.uf ?? ''} onChange={(e) => set('uf', e.target.value.toUpperCase())} /></label>
-      </div>
-      {cepMsg && <div className="suave pequeno">{cepMsg}</div>}
+      </CamposContato>
+      <CamposRedes c={c} set={set} />
+      <CamposEndereco c={c} set={set} />
 
       {erro && (
         <div className="aviso erro">{erro}

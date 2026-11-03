@@ -1,6 +1,6 @@
 import { createParamDecorator, ExecutionContext, SetMetadata } from '@nestjs/common';
 
-export type Modulo = 'M1' | 'M2' | 'M3' | 'M4' | 'M5' | 'M6' | 'M7' | 'M8' | 'M9' | 'BI';
+export type Modulo = 'M1' | 'M2' | 'M3' | 'M4' | 'M5' | 'M6' | 'M7' | 'M8' | 'M9' | 'BI' | 'DP';  // DP: dados pessoais (não é tela, só permissão)
 export type Acao = 'ver' | 'criar' | 'editar' | 'excluir' | 'aprovar' | 'ver_valores';
 
 export interface UsuarioLogado {

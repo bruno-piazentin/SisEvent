@@ -1,7 +1,7 @@
 'use client';
 import { use, useEffect, useState } from 'react';
 import { api, fmt, DIAS } from '@/lib/api';
-import { ExigeModulo, usePainel } from '@/components/Painel';
+import { ExigeModulo, usePainel, Voltar } from '@/components/Painel';
 import { FormProfissional } from '@/components/FormProfissional';
 import { Ocorrencias } from '@/components/Ocorrencias';
 import { LinksRedesSociais } from '@/components/RedesSociais';
@@ -31,11 +31,12 @@ function Ficha({ id }: { id: string }) {
   if (erro && !p) return <div className="aviso erro">{erro}</div>;
   if (!p) return <div className="suave">Carregando…</div>;
   if (editando) return (<><div className="topo"><h1>Editar {p.nome}</h1>
-    <button className="btn" onClick={() => setEditando(false)}>Cancelar</button></div><FormProfissional inicial={p} /></>);
+    <button className="btn" onClick={() => setEditando(false)}>Cancelar</button></div><FormProfissional inicial={p} onCancelar={() => setEditando(false)} /></>);
 
   const h = p.historico ?? {};
   return (
     <>
+      <Voltar para="/profissionais" />
       <div className="topo">
         <div>
           <h1>{p.nome_artistico ?? p.nome}</h1>
@@ -76,14 +77,14 @@ function Ficha({ id }: { id: string }) {
             <tr><td className="suave">Contato</td><td>{p.celular}<br />{p.email}</td></tr>
             <tr><td className="suave">Redes sociais</td><td><LinksRedesSociais valor={p.redes_sociais} /></td></tr>
             <tr><td className="suave">Cabelo</td><td>{[p.tipo_cabelo && TIPOS_CABELO[p.tipo_cabelo], p.cor_cabelo && CORES_CABELO[p.cor_cabelo]].filter(Boolean).join(' · ') || '—'}</td></tr>
-            <tr><td className="suave">Nascimento</td><td>{fmt.data(p.data_nascimento)}</td></tr>
+            {!p.ocultos && <tr><td className="suave">Nascimento</td><td>{fmt.data(p.data_nascimento)}</td></tr>}
             <tr><td className="suave">Medidas</td><td>{[p.altura_cm && `${p.altura_cm} cm`, p.peso_kg && `${p.peso_kg} kg`, p.manequim && `manequim ${p.manequim}`,
               p.tamanho_camiseta && `camiseta ${p.tamanho_camiseta}`, p.calcado && `calçado ${p.calcado}`].filter(Boolean).join(' · ') || '—'}</td></tr>
             <tr><td className="suave">Locomoção</td><td>{p.meios_locomocao.join(', ').replaceAll('_', ' ') || '—'}{p.cnh_categoria && ` · CNH ${p.cnh_categoria}`}</td></tr>
             <tr><td className="suave">Praças</td><td>{[p.pracas_aceitas.map((x: any) => x.nome)].flat().join(', ') || 'só a base'}</td></tr>
             <tr><td className="suave">Idiomas</td><td>{p.idiomas.join(', ')}</td></tr>
-            <tr><td className="suave">CPF</td><td>{p.cpf ?? '—'}</td></tr>
-            <tr><td className="suave">PIX</td><td>{p.chave_pix ?? '—'}</td></tr>
+            {!p.ocultos && <tr><td className="suave">CPF</td><td>{p.cpf ?? '—'}</td></tr>}
+            {!p.ocultos && <tr><td className="suave">PIX</td><td>{p.chave_pix ?? '—'}</td></tr>}
           </tbody></table>
         </section>
 

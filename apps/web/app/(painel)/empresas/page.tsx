@@ -3,6 +3,12 @@ import { useEffect, useState } from 'react';
 import { api, fmt } from '@/lib/api';
 import { usePainel } from '@/components/Painel';
 import { Confirmar } from '@/components/Confirmar';
+import { CamposContato, CamposEndereco, CamposIdentificacao, CamposRedes, corpoCadastro } from '@/components/CamposCadastro';
+import { LogoEmpresa } from '@/components/Marca';
+import { prepararLogo } from '@/lib/imagem';
+import { mascara } from '@/lib/ui';
+import { ConfigPrazos } from '@/components/PrazoEventos';
+import { PRAZOS_PADRAO } from '@/lib/prazos';
 
 const PERFIS: Record<string, string> = { admin: 'Administradora', central: 'Central', supervisor: 'Supervisor', financeiro: 'Financeiro' };
 
@@ -15,10 +21,10 @@ const mensagemErro = (e: any, duplicado: string) =>
 
 /** Cadastro de empresas da plataforma: só o usuário master vê esta tela */
 export default function Empresas() {
-  const { me } = usePainel();
+  const { me, recarregar } = usePainel();
   const [empresas, setEmpresas] = useState<any[]>([]);
   const [modulos, setModulos] = useState<any[]>([]);
-  const [nova, setNova] = useState(false);
+  const [formulario, setFormulario] = useState<'nova' | string | null>(null);   // 'nova' ou o id da empresa em edição
   const [aberta, setAberta] = useState<string | null>(null);
   const [confirmar, setConfirmar] = useState<any>(null);
   const [msg, setMsg] = useState('');
@@ -39,12 +45,19 @@ export default function Empresas() {
       <div className="topo">
         <div><h1>Empresas</h1>
           <div className="suave">Cada empresa só enxerga os próprios dados. Usuários entram com o código da empresa, o e-mail e a senha.</div></div>
-        {!nova && <button className="btn primario" onClick={() => { setNova(true); setMsg(''); }}>Nova empresa</button>}
+        {!formulario && <button className="btn primario" onClick={() => { setFormulario('nova'); setMsg(''); }}>Nova empresa</button>}
       </div>
       {msg && <div className="aviso ok" style={{ marginBottom: 12 }}>{msg}</div>}
 
-      {nova && <NovaEmpresa modulos={modulos} onCancelar={() => setNova(false)}
-        onCriada={(e) => { setNova(false); setMsg(`Empresa ${e.nome} criada. Código de acesso: ${e.slug}`); carregar(); setAberta(e.id); }} />}
+      {formulario && <FormEmpresa key={formulario} empresaId={formulario === 'nova' ? undefined : formulario} modulos={modulos}
+        onCancelar={() => setFormulario(null)}
+        onSalva={(e) => {
+          setMsg(formulario === 'nova' ? `Empresa ${e.nome} criada. Código de acesso: ${e.slug}` : `Cadastro de ${e.nome} salvo. Código de acesso: ${e.slug}`);
+          if (formulario === 'nova') setAberta(e.id);
+          // a própria empresa do master: menu (nome e logo) atualiza na hora
+          if (e.id === me.empresa.id) recarregar();
+          setFormulario(null); carregar();
+        }} />}
 
       <section className="cartao">
         <div className="tabela"><table>
@@ -54,6 +67,7 @@ export default function Empresas() {
               <FragmentoEmpresa key={e.id} e={e} aberta={aberta === e.id} nomeModulo={nomeModulo}
                 propria={e.slug === me.empresa.slug}
                 onAbrir={() => setAberta(aberta === e.id ? null : e.id)}
+                onEditar={() => { setFormulario(e.id); setMsg(''); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
                 onSituacao={() => setConfirmar(e)} onMudou={carregar} />
             ))}
           </tbody>
@@ -77,19 +91,25 @@ export default function Empresas() {
   );
 }
 
-function FragmentoEmpresa({ e, aberta, propria, nomeModulo, onAbrir, onSituacao, onMudou }: {
+function FragmentoEmpresa({ e, aberta, propria, nomeModulo, onAbrir, onEditar, onSituacao, onMudou }: {
   e: any; aberta: boolean; propria: boolean; nomeModulo: (c: string) => string;
-  onAbrir: () => void; onSituacao: () => void; onMudou: () => void;
+  onAbrir: () => void; onEditar: () => void; onSituacao: () => void; onMudou: () => void;
 }) {
   return (
     <>
       <tr>
-        <td><strong>{e.nome}</strong><div className="suave pequeno">desde {fmt.data(e.criado_em)}</div></td>
+        <td><strong>{e.nome}</strong>
+          <div className="suave pequeno">
+            {e.razao_social && e.razao_social !== e.nome && <>{e.razao_social} · </>}
+            {e.cnpj ? `CNPJ ${mascara.cnpj(e.cnpj)} · ` : e.cpf ? `CPF ${mascara.cpf(e.cpf)} · ` : ''}
+            {e.cidade && `${e.cidade}/${e.uf} · `}desde {fmt.data(e.criado_em)}
+          </div></td>
         <td><code>{e.slug}</code></td>
         <td>{e.ativo ? <span className="etiqueta ok">ativa</span> : <span className="etiqueta neutra">inativa</span>}</td>
         <td>{e.usuarios}</td>
-        <td className="pequeno" title={e.modulos.map(nomeModulo).join(', ')}>{e.modulos.join(', ') || '—'}</td>
+        <td className="pequeno" title={e.modulos.filter((x: string) => x !== 'DP').map(nomeModulo).join(', ')}>{e.modulos.filter((x: string) => x !== 'DP').join(', ') || '—'}</td>
         <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+          <button className="btn pequeno" onClick={onEditar}>Editar</button>{' '}
           <button className="btn pequeno" onClick={onAbrir}>{aberta ? 'Fechar' : 'Usuários'}</button>{' '}
           {!propria && <button className={`btn pequeno ${e.ativo ? 'perigo' : ''}`} onClick={onSituacao}>{e.ativo ? 'Inativar' : 'Reativar'}</button>}
         </td>
@@ -99,62 +119,109 @@ function FragmentoEmpresa({ e, aberta, propria, nomeModulo, onAbrir, onSituacao,
   );
 }
 
-function NovaEmpresa({ modulos, onCancelar, onCriada }: { modulos: any[]; onCancelar: () => void; onCriada: (e: any) => void }) {
-  const [nome, setNome] = useState('');
-  const [slug, setSlug] = useState('');
-  const [slugManual, setSlugManual] = useState(false);
-  const [escolhidos, setEscolhidos] = useState<string[]>(['M1', 'M3', 'M4', 'M5', 'M7', 'BI']);
+/** Cadastro da empresa: os mesmos dados do cliente, mais código de acesso, logo, módulos e (na criação) a administradora */
+function FormEmpresa({ empresaId, modulos, onCancelar, onSalva }: {
+  empresaId?: string; modulos: any[]; onCancelar: () => void; onSalva: (e: any) => void;
+}) {
+  const [c, setC] = useState<any>(empresaId ? null : { pessoa: 'juridica', modulos: ['M1', 'M3', 'M4', 'M5', 'M7', 'BI'], prazos_eventos: PRAZOS_PADRAO });
+  const [slugManual, setSlugManual] = useState(!!empresaId);
+  const [slugOriginal, setSlugOriginal] = useState('');
   const [admin, setAdmin] = useState({ nome: '', email: '', senha: '' });
   const [erro, setErro] = useState('');
   const [salvando, setSalvando] = useState(false);
 
+  useEffect(() => {
+    if (!empresaId) return;
+    api(`/empresas/${empresaId}`).then((e) => { setC(e); setSlugOriginal(e.slug); }).catch((e) => setErro(e.message));
+  }, [empresaId]);
+
+  if (!c) return <div className="cartao" style={{ marginBottom: 16 }}>{erro ? <div className="aviso erro">{erro}</div> : <span className="suave">Carregando…</span>}</div>;
+
+  const set = (k: string, v: unknown) => setC((x: any) => {
+    const n = { ...x, [k]: v };
+    // código de acesso sugerido pelo nome, até alguém mexer nele
+    if (!slugManual && (k === 'nome_fantasia' || k === 'razao_social')) n.slug = paraCodigo(n.nome_fantasia || n.razao_social || '');
+    return n;
+  });
+  const alternar = (m: string) => set('modulos', c.modulos.includes(m) ? c.modulos.filter((x: string) => x !== m) : [...c.modulos, m]);
+
+  async function escolherLogo(e: React.ChangeEvent<HTMLInputElement>) {
+    const arquivo = e.target.files?.[0];
+    e.target.value = '';
+    if (!arquivo) return;
+    try { set('logo', await prepararLogo(arquivo)); } catch (x: any) { setErro(x.message); }
+  }
+
   async function salvar(ev: React.FormEvent) {
     ev.preventDefault();
     setErro(''); setSalvando(true);
+    const corpo = { ...corpoCadastro(c), slug: c.slug, modulos: c.modulos, logo: c.logo ?? null, prazos_eventos: c.prazos_eventos ?? PRAZOS_PADRAO };
     try {
-      onCriada(await api('/empresas', { method: 'POST', json: { nome, slug, modulos: escolhidos, admin } }));
+      onSalva(empresaId
+        ? await api(`/empresas/${empresaId}`, { method: 'PUT', json: corpo })
+        : await api('/empresas', { method: 'POST', json: { ...corpo, admin } }));
     } catch (e: any) {
-      setErro(mensagemErro(e, 'Já existe uma empresa com esse código de acesso.'));
+      setErro(e.dados?.campos?.[0]?.mensagem ?? e.message);
     } finally { setSalvando(false); }
   }
 
-  const alternar = (c: string) => setEscolhidos((l) => l.includes(c) ? l.filter((x) => x !== c) : [...l, c]);
-
   return (
     <form className="cartao form" style={{ marginBottom: 16 }} onSubmit={salvar}>
-      <h2>Nova empresa</h2>
+      <h2 style={{ margin: 0 }}>{empresaId ? `Editar ${c.nome_fantasia}` : 'Nova empresa'}</h2>
+
+      <CamposIdentificacao c={c} set={set} />
       <div className="linha">
-        <label>Nome da empresa
-          <input required value={nome} onChange={(e) => { setNome(e.target.value); if (!slugManual) setSlug(paraCodigo(e.target.value)); }} /></label>
         <label>Código de acesso (usado no login)
-          <input required value={slug} pattern="[a-z0-9][a-z0-9\-]{1,39}" title="Letras minúsculas, números ou hífen"
-                 onChange={(e) => { setSlugManual(true); setSlug(e.target.value.toLowerCase()); }} /></label>
+          <input required value={c.slug ?? ''} pattern="[a-z0-9][a-z0-9\-]{1,39}" title="Letras minúsculas, números ou hífen"
+                 onChange={(e) => { setSlugManual(true); set('slug', e.target.value.toLowerCase()); }} /></label>
       </div>
+      {empresaId && c.slug !== slugOriginal && (
+        <div className="aviso">Ao trocar o código, os usuários de {c.nome_fantasia} passam a entrar com <code>{c.slug}</code> em vez de <code>{slugOriginal}</code>. Avise a equipe.</div>
+      )}
+      <CamposContato c={c} set={set} />
+      <CamposRedes c={c} set={set} />
+      <CamposEndereco c={c} set={set} />
+
+      <div className="suave pequeno" style={{ fontWeight: 600 }}>Logo</div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+        <LogoEmpresa nome={c.nome_fantasia || c.razao_social || '?'} logo={c.logo} tamanho={48} />
+        <label className="btn pequeno" style={{ cursor: 'pointer' }}>
+          {c.logo ? 'Trocar logo' : 'Enviar logo'}
+          <input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" hidden onChange={escolherLogo} />
+        </label>
+        {c.logo && <button type="button" className="btn pequeno" onClick={() => set('logo', null)}>Remover</button>}
+        <span className="suave pequeno">PNG com fundo transparente ou SVG. Aparece no menu e na página do profissional.</span>
+      </div>
+
+      <div className="suave pequeno" style={{ fontWeight: 600 }}>Cores do prazo dos eventos</div>
+      <ConfigPrazos valor={c.prazos_eventos ?? PRAZOS_PADRAO} onChange={(p) => set('prazos_eventos', p)} />
 
       <div>
         <div style={{ fontWeight: 600, marginBottom: 6 }}>Módulos liberados</div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 16px' }}>
-          {modulos.map((m) => (
+          {modulos.filter((m) => !m.so_permissao).map((m) => (
             <label key={m.codigo} style={{ display: 'flex', gap: 6, alignItems: 'center', fontWeight: 400 }}>
-              <input type="checkbox" style={{ width: 'auto' }} checked={escolhidos.includes(m.codigo)} onChange={() => alternar(m.codigo)} />
+              <input type="checkbox" style={{ width: 'auto' }} checked={c.modulos.includes(m.codigo)} onChange={() => alternar(m.codigo)} />
               {m.codigo} — {m.nome}
             </label>
           ))}
         </div>
-        <div className="suave pequeno" style={{ marginTop: 4 }}>A administradora da empresa poderá ajustar depois em Módulos e acessos.</div>
+        <div className="suave pequeno" style={{ marginTop: 4 }}>A administradora da empresa também pode ajustar em Módulos e acessos.</div>
       </div>
 
-      <div style={{ fontWeight: 600 }}>Administradora da empresa (primeiro acesso)</div>
-      <div className="linha">
-        <label>Nome<input required value={admin.nome} onChange={(e) => setAdmin({ ...admin, nome: e.target.value })} /></label>
-        <label>E-mail<input required type="email" value={admin.email} onChange={(e) => setAdmin({ ...admin, email: e.target.value })} /></label>
-        <label>Senha inicial<input required type="password" minLength={8} autoComplete="new-password" value={admin.senha}
-                                    onChange={(e) => setAdmin({ ...admin, senha: e.target.value })} /></label>
-      </div>
+      {!empresaId && <>
+        <div style={{ fontWeight: 600 }}>Administradora da empresa (primeiro acesso)</div>
+        <div className="linha">
+          <label>Nome<input required value={admin.nome} onChange={(e) => setAdmin({ ...admin, nome: e.target.value })} /></label>
+          <label>E-mail<input required type="email" value={admin.email} onChange={(e) => setAdmin({ ...admin, email: e.target.value })} /></label>
+          <label>Senha inicial<input required type="password" minLength={8} autoComplete="new-password" value={admin.senha}
+                                      onChange={(e) => setAdmin({ ...admin, senha: e.target.value })} /></label>
+        </div>
+      </>}
 
       {erro && <div className="aviso erro">{erro}</div>}
       <div style={{ display: 'flex', gap: 8 }}>
-        <button className="btn primario" disabled={salvando}>{salvando ? 'Criando…' : 'Criar empresa'}</button>
+        <button className="btn primario" disabled={salvando}>{salvando ? 'Salvando…' : empresaId ? 'Salvar' : 'Criar empresa'}</button>
         <button type="button" className="btn" onClick={onCancelar}>Cancelar</button>
       </div>
     </form>

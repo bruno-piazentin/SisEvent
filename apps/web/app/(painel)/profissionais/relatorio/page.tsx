@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { api, fmt } from '@/lib/api';
 import { baixarCsv, CORES_CABELO, TIPOS_CABELO } from '@/lib/ui';
 import { descreverFiltros } from '@/lib/filtrosProfissionais';
-import { ExigeModulo, usePainel } from '@/components/Painel';
+import { ExigeModulo, usePainel, Voltar } from '@/components/Painel';
 import { redesEmTexto } from '@/components/RedesSociais';
 
 const STATUS: Record<string, string> = { ativo: 'Ativo', em_teste: 'Em teste', inativo: 'Inativo', bloqueado: 'Bloqueado' };
@@ -59,6 +59,7 @@ function Relatorio() {
 
   return (
     <div className="relatorio">
+      <Voltar para="/profissionais" />
       <div className="topo nao-imprimir">
         <div><div className="suave pequeno"><Link href="/profissionais">Banco de talentos</Link> / Relatório</div><h1>Relatório de profissionais</h1></div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>

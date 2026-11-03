@@ -41,8 +41,6 @@
 
   /* capa */
   .capa { height: 255mm; display: flex; flex-direction: column; justify-content: space-between; }
-  .capa .marca { display: inline-flex; align-items: center; justify-content: center; width: 56px; height: 56px; border-radius: 14px;
-    background: var(--roxo); color: #fff; font-weight: 800; font-size: 20pt; }
   .capa h1 { font-size: 38pt; margin: 28px 0 6px; }
   .capa .sub { font-size: 14pt; color: var(--suave); }
   .capa .faixa { height: 6px; width: 120px; background: var(--coral); border-radius: 3px; margin-top: 22px; }
@@ -60,7 +58,7 @@
 
 <div class="capa">
   <div>
-    <div class="marca">RD</div>
+    <svg width="64" height="64" viewBox="0 0 512 512" aria-label="SisEvent"><rect width="512" height="512" rx="116" fill="#5b2a86"/><path d="M336 168H214a44 44 0 0 0 0 88h84a44 44 0 0 1 0 88H176" fill="none" stroke="#fff" stroke-width="56" stroke-linecap="round" stroke-linejoin="round"/><circle cx="388" cy="126" r="34" fill="#ef6f4c"/></svg>
     <h1>Manual do SisEvent</h1>
     <div class="sub">Gestão de casting, escala, check-in e financeiro de eventos</div>
     <div class="faixa"></div>
@@ -98,7 +96,7 @@
   <p>Na tela de login, preencha três campos:</p>
   <table>
     <tr><th style="width:28%">Campo</th><th>O que digitar</th></tr>
-    <tr><td>Empresa</td><td>O código de acesso da sua empresa, em letras minúsculas (ex.: <code>rafadutra</code>). Quem informa é a administradora.</td></tr>
+    <tr><td>Empresa</td><td>O código de acesso da sua empresa, em letras minúsculas (ex.: <code>rafadutra</code>). Quem informa é a administradora. O navegador lembra a última empresa usada.</td></tr>
     <tr><td>E-mail</td><td>Seu e-mail cadastrado como usuário.</td></tr>
     <tr><td>Senha</td><td>Sua senha (mínimo de 8 caracteres).</td></tr>
   </table>
@@ -117,6 +115,9 @@
 
   <h3>Módulos</h3>
   <p>O menu lateral só mostra os módulos liberados para a empresa <b>e</b> permitidos para o seu perfil.</p>
+  <p>As telas que abrem a partir de um módulo (ficha de evento, profissional ou cliente, cadastro novo e relatórios) têm o botão <span class="botao">← Voltar</span> no alto, que leva de volta à tela de onde você veio (ou à lista do módulo, se a tela foi aberta direto pelo link). Os cadastros novos também têm <span class="botao">Cancelar</span> ao lado do botão de salvar.</p>
+  <h3>Tema claro ou escuro</h3>
+  <p>No menu <span class="menu">Configurações</span> (aberto a todos os usuários), escolha o tema: <span class="botao">Automático</span> segue o aparelho (claro de dia, escuro se o celular ou computador estiver no modo escuro), <span class="botao">Claro</span> e <span class="botao">Escuro</span> ficam fixos. No tema claro, o menu lateral fica no roxo da marca e o item aberto aparece num roxo mais claro; no escuro, é o inverso: menu lateral claro e o item aberto em roxo. A escolha fica guardada no navegador e vale também na tela de login e no portal do profissional daquele aparelho. Relatórios impressos e a tela do QR de check-in saem sempre no claro.</p>
   <table>
     <tr><th style="width:12%">Código</th><th style="width:30%">Menu</th><th>Para que serve</th></tr>
     <tr><td>BI</td><td>Painel</td><td>Indicadores e gráficos da tela inicial.</td></tr>
@@ -136,9 +137,23 @@
   <p>É a primeira tela após o login (menu <span class="menu">Painel</span>). Mostra:</p>
   <ul>
     <li><b>Eventos no mês</b> e <b>ocupação da base</b> (percentual sobre o efetivo escalado).</li>
-    <li><b>Próximos eventos</b>, com destaque para os que estão perto de começar.</li>
+    <li><b>Cards de prazo dos eventos</b>, cada um com a sua cor (veja abaixo).</li>
+    <li><b>Calendário de eventos</b>. Cada dia com evento aparece destacado, com uma bolinha na cor do prazo de cada evento e a quantidade quando há mais de um. Eventos de vários dias aparecem em todos os dias. As setas <span class="botao">‹</span> e <span class="botao">›</span> trocam o mês e <span class="botao">Hoje</span> volta ao dia atual. <b>Clique numa data</b> para ver ao lado os eventos dela: nome, situação, horário, cliente, marca, praça, local, confirmados e vagas abertas. Clique no evento para abri-lo. Em hoje ou numa data futura, o botão <span class="botao">+ Novo evento neste dia</span> abre a criação de evento com o 1º turno já nessa data (das 08:00 às 18:00, que podem ser alterados). Ao clicar num card de prazo, o calendário marca só os eventos daquele card e a lista mostra todos eles; <span class="botao">Ver o dia</span> volta ao normal.</li>
     <li><b>Margem por cliente</b> (só para quem tem permissão de ver valores) e <b>profissionais mais assíduos</b>.</li>
   </ul>
+  <h3>Cards de prazo dos eventos</h3>
+  <p>Cada evento cai em uma faixa conforme a distância até o início. As cores e os prazos abaixo são o padrão; cada empresa pode mudar no cadastro da empresa (capítulo 11).</p>
+  <table>
+    <tr><th style="width:30%">Card</th><th>Quais eventos</th></tr>
+    <tr><td><span style="color:#1f1d22">●</span> Encerrados (preto)</td><td>Encerrados ou fechados, ou cuja data já passou. Só os dos últimos 30 dias.</td></tr>
+    <tr><td><span style="color:#f57c00">●</span> Hoje (laranja)</td><td>Começam hoje ou estão em andamento.</td></tr>
+    <tr><td><span style="color:#f2c200">●</span> Até 5 dias (amarelo)</td><td>Começam de amanhã até daqui a 5 dias.</td></tr>
+    <tr><td><span style="color:#2e9d57">●</span> De 6 a 15 dias (verde)</td><td>Começam daqui a 6 até 15 dias.</td></tr>
+    <tr><td><span style="color:#2f6fdb">●</span> Mais de 15 dias (azul)</td><td>Começam daqui a mais de 15 dias.</td></tr>
+    <tr><td><span style="color:#d32f2f">●</span> Cancelados (vermelho)</td><td>Cancelados. Só os dos últimos 30 dias.</td></tr>
+  </table>
+  <p>Nos cards de eventos futuros aparece, em destaque, quantos ainda estão <b>com vaga aberta</b>.</p>
+
   <h3>Comparativo e evolução de eventos</h3>
   <p>Abaixo dos demais blocos ficam:</p>
   <ul>
@@ -261,6 +276,10 @@
 
   <h3>Clonar um evento</h3>
   <p><span class="botao">Clonar como novo</span> copia o evento (local, turnos, postos e observações) para uma nova data e hora de início. A escala não é copiada.</p>
+  <h3>Relatório do evento</h3>
+  <p>Na ficha do evento, o botão <span class="botao">Relatório</span> monta um documento para imprimir ou salvar em PDF e enviar ao cliente ou à equipe. Ele traz os <b>dados do evento</b> (cliente, marca, período, praça, descrição, supervisão e regras de check-in), o <b>local</b> (endereço, contato no local e observações) e, por turno, cada <b>posto</b> com uniforme, requisitos e os <b>profissionais escalados</b> (titular ou suplente, se já confirmou e, depois do evento, a presença com entrada e saída).</p>
+  <div class="atencao"><b>Sem valores</b>O relatório nunca mostra diárias, receita, custo ou margem, nem para quem tem permissão de ver valores.</div>
+  <p>Antes de imprimir, escolha se entram os <b>suplentes</b> e o <b>celular dos profissionais</b> (o celular vem desmarcado). Recusados e cancelados não aparecem. A lista de profissionais só aparece para quem tem acesso à Escala.</p>
 </section>
 
 <!-- ================================================================ -->
@@ -294,6 +313,10 @@
     <li>vê os <b>próximos eventos</b> e os <b>pagamentos</b>;</li>
     <li>faz <b>check-in e check-out</b>, que abre <b>2 horas antes</b> do início, lendo o QR com a câmera ou digitando o código de 6 dígitos.</li>
   </ul>
+  <p>No topo da página aparecem o nome e o logo da empresa que fez a convocação.</p>
+  <h3>Avaliação do evento pelo profissional</h3>
+  <p>Logo depois de registrar a saída (pela página pessoal ou pelo QR), o profissional responde <b>“Como foi este evento?”</b>, com a mesma escala de 1 a 5. A avaliação é <b>obrigatória</b>: não há botão de pular, e enquanto ele não responder, o evento aparece em <b>“Avalie seus eventos”</b> no topo da página pessoal (por até 30 dias após a saída). Na nota 1, ele precisa contar o que aconteceu.</p>
+
   <h3>QR de check-in</h3>
   <p>No evento (ou no menu <span class="menu">Campo</span>), clique em <span class="botao">Abrir QR de check-in</span> e deixe a tela aberta num tablet ou celular na entrada. O QR muda sozinho e cada código <b>vale por 30 segundos</b>, o que impede o check-in à distância com uma foto do QR.</p>
   <div class="dica"><b>Primeiro acesso no celular</b>Se o profissional escanear o QR sem ter aberto o link pessoal antes, o sistema pede que ele abra o link recebido no WhatsApp e escaneie de novo.</div>
@@ -301,7 +324,7 @@
   <h3>Presença em campo</h3>
   <p>Aba <span class="botao">Presença em campo</span> do evento, que se atualiza a cada 20 segundos. Mostra quem está presente, atrasado (com os minutos de atraso), aguardando, saiu ou faltou. Registros fora do esperado (por exemplo, longe do local) aparecem com a marca <b>verificar</b>.</p>
   <p>Quem tem permissão pode lançar <span class="botao">Entrada manual</span>, <span class="botao">Saída manual</span> ou <span class="botao">Falta</span>, sempre com um motivo.</p>
-  <p>O menu <span class="menu">Campo</span> lista os eventos de hoje e amanhã, com atalhos para o QR e para a presença.</p>
+  <p>O menu <span class="menu">Campo</span> mostra os mesmos cards de prazo da tela inicial e abre com o card <b>Hoje</b> selecionado. Clique em outro card para ver os eventos daquela faixa. Cada evento aparece com a faixa colorida do prazo e com atalhos para o QR e para a presença.</p>
 </section>
 
 <!-- ================================================================ -->
@@ -312,7 +335,17 @@
   <ul>
     <li><b>Vaga aberta</b>: preencha a vaga ou clique em <span class="botao">Justificar</span> para fechar com ela em aberto.</li>
     <li><b>Check-out pendente</b>: não impede o fechamento. Quem ficou sem check-out é calculado até o fim do turno.</li>
+    <li><b>Avaliação pendente</b>: a nota é <b>obrigatória</b> para todo profissional que fez check-in. Clique em <span class="botao">Avaliar</span>.</li>
   </ul>
+  <h3>Avaliação dos profissionais</h3>
+  <p>No quadro <b>Avaliação dos profissionais</b>, abaixo das pendências, cada pessoa que trabalhou recebe uma nota de 1 a 5 (precisa da permissão de editar na Escala, M5):</p>
+  <table>
+    <tr><th style="width:28%">Nota</th><th>O que acontece com o comentário</th></tr>
+    <tr><td>5 · Excelente</td><td>O sistema sugere deixar um elogio (opcional).</td></tr>
+    <tr><td>4 · Muito bom<br>3 · Bom<br>2 · Regular</td><td>Abre o campo de observação, sem obrigatoriedade.</td></tr>
+    <tr><td>1 · Péssimo</td><td>É obrigatório relatar o que motivou a nota (pelo menos 10 letras).</td></tr>
+  </table>
+  <p>O quadro também mostra a <b>nota que cada profissional deu ao evento</b> no check-out, com o comentário dele. A nota da empresa entra na <b>nota média</b> do profissional e na sugestão de profissionais para os próximos eventos. Ela pode ser alterada depois, inclusive com o evento já fechado.</p>
   <p>Com as pendências resolvidas, quem tem permissão de aprovar no Financeiro clica em <span class="botao">Fechar evento e gerar pagamentos</span>.</p>
   <div class="atencao"><b>O fechamento trava o evento</b>A escala e o local deixam de poder ser alterados, e os valores a pagar são gerados.</div>
   <p>Depois de fechado, o evento mostra a <b>receita</b>, o <b>custo de equipe</b>, os <b>custos diretos</b> e a <b>margem</b>, além dos <b>valores a pagar</b> por profissional (diária, hora extra, adicional noturno, descontos/adicionais e total).</p>
@@ -320,6 +353,7 @@
   <ul>
     <li><b>Pagamentos pendentes</b> dos eventos fechados.</li>
     <li><b>Margem por evento</b> e <b>por cliente</b>.</li>
+    <li>Botão <span class="botao">Relatório</span> (para quem vê valores): lista os eventos do período com <b>data, cliente, receita, custo, margem</b> e o percentual, com o total e um resumo por cliente. Filtre por período (o padrão é o mês atual), cliente e situação (realizados, que já foram fechados, ou previstos, ainda estimados pelos postos). Eventos cancelados não entram. <span class="botao">Exportar planilha (CSV)</span> abre no Excel; <span class="botao">Imprimir / salvar PDF</span> imprime só o relatório.</li>
   </ul>
 </section>
 
@@ -333,13 +367,38 @@
 <!-- ================================================================ -->
 <section class="capitulo" id="admin">
   <h2>10. Módulos e acessos</h2>
-  <p>Menu <span class="menu">Módulos e acessos</span>, só para a administradora da empresa. O acesso é decidido em três camadas:</p>
+  <p>Menu <span class="menu">Módulos e acessos</span>, só para a administradora da empresa.</p>
+  <h3>Logo da empresa</h3>
+  <p>No quadro <b>Logo da empresa</b>, use <span class="botao">Enviar logo</span> (ou <span class="botao">Trocar logo</span>) e escolha um arquivo PNG, JPG, WEBP ou SVG. Prefira PNG com fundo transparente. A imagem é reduzida automaticamente e passa a aparecer no menu do painel e na página do profissional. <span class="botao">Remover</span> volta a mostrar as iniciais da empresa.</p>
+  <h3>Quem acessa o quê</h3>
+  <p>O acesso é decidido em três camadas:</p>
   <ol class="passos">
     <li><b>Módulos liberados para a empresa</b>: <span class="botao">Liberar</span> ou <span class="botao">Bloquear</span> cada módulo. Um módulo bloqueado some do menu de todos.</li>
     <li><b>Permissões por perfil</b>: para cada perfil (Central, Supervisor, Financeiro), marque o que ele pode fazer em cada módulo: ver, criar, editar, excluir, aprovar e ver valores. A Administradora tem acesso total aos módulos liberados.</li>
     <li><b>Ajustes individuais</b>: exceções para uma pessoa específica, que valem mais que o perfil.</li>
   </ol>
-  <p>As mudanças valem a partir do próximo carregamento da tela de cada usuário.</p>
+  <h3>Usuários e permissões individuais</h3>
+  <p>No quadro <b>3. Usuários e permissões individuais</b>, a administradora:</p>
+  <ul>
+    <li>cadastra um <b>novo usuário</b> (nome, e-mail, perfil e senha inicial);</li>
+    <li>troca o <b>perfil</b> pela lista ao lado do nome;</li>
+    <li>usa <span class="botao">Redefinir senha</span> e <span class="botao">Inativar</span> / <span class="botao">Reativar</span> (com confirmação; o usuário inativo não entra, e o histórico fica guardado);</li>
+    <li>em <span class="botao">Permissões</span>, vê a tabela módulo × ação daquela pessoa. Cada casa mostra ✓ (pode) ou × (não pode). Clicar inverte: em <b>verde</b>, liberado só para ela; em <b>vermelho</b>, bloqueado só para ela; sem cor, vale o perfil. Clicar de novo volta ao perfil, e <span class="botao">Voltar tudo ao perfil</span> desfaz todos os ajustes.</li>
+  </ul>
+  <p>Para não perder o acesso, a administradora não pode inativar nem mudar o perfil do próprio usuário. O usuário de manutenção do SisEvent aparece com a marca <b>manutenção</b> e não pode ser alterado.</p>
+  <p>Inativar um usuário ou redefinir a senha dele <b>encerra na hora</b> as sessões que ele tinha abertas. Mudanças de perfil e de permissões valem já na próxima ação dele; o menu se atualiza no próximo carregamento da tela.</p>
+
+  <h3>Dados pessoais (permissão DP)</h3>
+  <p>CPF, RG, data de nascimento e dados bancários (chave PIX, CNPJ MEI) dos profissionais e o CPF de clientes pessoa física são <b>dados pessoais</b>. Só quem tem a permissão <b>DP · Dados pessoais</b> vê e altera esses campos; para os demais, eles <b>não aparecem</b> nas telas, e o sistema também não deixa gravá-los. O CNPJ de empresas continua visível para todos.</p>
+  <ul>
+    <li>Têm a permissão: a <b>Administradora</b>, o usuário de manutenção e o perfil <b>Financeiro</b> (que precisa da chave PIX para pagar).</li>
+    <li>Para liberar a outra pessoa, abra <span class="botao">Permissões</span> do usuário e clique na casa <b>Ver</b> da linha <b>DP Dados pessoais</b>. Para um perfil inteiro, use o quadro <b>2. Permissões por perfil</b>.</li>
+    <li>O lote de pagamento (arquivo para o banco) leva CPF e chave PIX, por isso também exige essa permissão.</li>
+    <li>Esses dados ficam gravados <b>criptografados</b> no banco, e o histórico de alterações registra só que o campo mudou, nunca o valor.</li>
+  </ul>
+
+  <h3>Bloqueio por senha errada</h3>
+  <p>Depois de <b>5 senhas erradas seguidas</b>, o usuário fica bloqueado por <b>15 minutos</b>, mesmo que acerte a senha depois. A tela de login mostra até que horas. Se a pessoa esqueceu a senha, a administradora usa <span class="botao">Redefinir senha</span>.</p>
 </section>
 
 <!-- ================================================================ -->
@@ -351,12 +410,18 @@
   <h3>Cadastrar uma empresa</h3>
   <ol class="passos">
     <li>Em <span class="menu">Empresas</span>, clique em <span class="botao">Nova empresa</span>.</li>
-    <li>Informe o <b>nome</b>. O <b>código de acesso</b> é sugerido a partir do nome (só letras minúsculas, números e hífen) e pode ser ajustado.</li>
+    <li>Preencha os <b>mesmos dados do cadastro de clientes</b>: pessoa jurídica (CNPJ) ou física (CPF), razão social, nome fantasia, telefone, e-mail, redes sociais e endereço (o CEP preenche o resto). O CNPJ e o CPF são conferidos, e a mesma empresa não pode ser cadastrada duas vezes.</li>
+    <li>O <b>nome fantasia</b> é o nome que aparece no sistema (sem ele, vale a razão social). O <b>código de acesso</b> é sugerido a partir do nome (só letras minúsculas, números e hífen) e pode ser ajustado.</li>
+    <li>Se quiser, envie o <b>logo</b> da empresa.</li>
+    <li>Em <b>Cores do prazo dos eventos</b>, ajuste os dois prazos (padrão: 5 e 15 dias), quantos dias de encerrados e cancelados mostrar (padrão: 30) e a cor de cada card.</li>
     <li>Marque os <b>módulos liberados</b>.</li>
     <li>Cadastre a <b>administradora</b> da empresa: nome, e-mail e senha inicial.</li>
     <li>Clique em <span class="botao">Criar empresa</span> e informe à administradora o código de acesso, o e-mail e a senha.</li>
   </ol>
   <p>A empresa já nasce com os perfis padrão (Administradora, Central, Supervisor e Financeiro).</p>
+
+  <h3>Editar uma empresa</h3>
+  <p>Na linha da empresa, clique em <span class="botao">Editar</span>. Dá para alterar todos os dados do cadastro, o logo, os módulos liberados e o código de acesso. Ao trocar o código, a tela avisa: os usuários da empresa passam a entrar com o código novo, então avise a equipe.</p>
 
   <h3>Usuários de uma empresa</h3>
   <p>Na linha da empresa, clique em <span class="botao">Usuários</span> para:</p>
@@ -388,7 +453,22 @@
   <h2>13. Histórico de atualizações</h2>
   <table>
     <tr><th style="width:18%">Data</th><th>O que mudou</th></tr>
+    <tr><td>03/11/2026</td><td>
+      <b>Segurança</b>: permissão <b>DP · Dados pessoais</b> para ver CPF, RG, nascimento e dados bancários (sem ela os campos não aparecem); esses dados passam a ser gravados criptografados; bloqueio de 15 minutos após 5 senhas erradas; inativar ou redefinir a senha encerra as sessões abertas (capítulo 10).<br>
+      <b>Painel inicial</b>: "Próximos eventos" virou um <b>calendário</b> com os eventos marcados na cor do prazo; clicar numa data lista os eventos do dia com os detalhes (capítulo 2).<br>
+      <b>Financeiro</b>: botão <b>Relatório</b> com receita, custo e margem de cada evento e cliente, para imprimir, salvar em PDF ou exportar para planilha (capítulo 8).<br>
+      <b>Navegação</b>: botão <b>← Voltar</b> em todas as telas abertas a partir dos menus e <b>Cancelar</b> nos cadastros novos de evento e profissional (capítulo 1).<br>
+      <b>Relatório do evento</b>: na ficha do evento, documento com os dados do evento, o local e os profissionais escalados, sem nenhum valor (capítulo 5).<br>
+      <b>Tema escuro</b>: escolha Automático, Claro ou Escuro no novo menu <b>Configurações</b>; no claro o menu lateral fica roxo, no escuro fica claro (capítulo 1).
+    </td></tr>
     <tr><td>30/10/2026</td><td>
+      <b>Avaliações obrigatórias</b>: a empresa avalia cada profissional no fechamento (o evento só fecha com todos avaliados) e o profissional avalia o evento no check-out, na escala de 1 (Péssimo) a 5 (Excelente) (capítulos 7 e 8).<br>
+      <b>Usuários</b>: a administradora edita perfil, senha e situação e libera ou bloqueia permissões por pessoa em Módulos e acessos (capítulo 10).<br>
+      <b>Cards de prazo dos eventos</b> com cores na tela inicial e no Campo, configuráveis por empresa (capítulos 2, 7 e 11).<br>
+      <b>Empresas</b>: cadastro com os mesmos dados do cliente (CNPJ/CPF, contato, redes e endereço) e botão <b>Editar</b> (capítulo 11).<br>
+      <b>Marca do SisEvent</b> no login, no menu e no ícone do aplicativo (sai o “RD”).<br>
+      <b>Logo da empresa</b>: cada empresa envia o próprio logo em Módulos e acessos (capítulo 10); ele aparece no menu e na página do profissional.<br>
+      <b>Login</b>: o campo Empresa começa vazio e lembra a última empresa usada.<br>
       <b>Empresas</b>: cadastro de várias empresas pelo usuário master, com usuários, perfis, módulos e inativação (capítulo 11).<br>
       <b>Usuário master</b> de manutenção, com acesso a qualquer empresa.<br>
       <b>Manual em PDF</b> criado.</td></tr>

@@ -1,10 +1,11 @@
-import { Body, Controller, Get, HttpCode, Post, UnauthorizedException, Inject } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpException, Ip, Post, UnauthorizedException, Inject } from '@nestjs/common';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { z } from 'zod';
 import { config } from '../config';
 import { DbService } from '../db/db.service';
 import { Validar } from '../comum/validacao';
+import { limitar } from '../comum/limite';
 import { randomUUID } from 'node:crypto';
 import { MODULOS } from '../admin/admin.controller';
 import { criarEmpresa } from '../admin/empresas.controller';
@@ -16,6 +17,13 @@ const Login = z.object({
   senha: z.string().min(6),
 });
 
+/** Senha errada 5 vezes seguidas: o usuário fica bloqueado por 15 minutos (mesmo acertando) */
+function bloqueado(ate: Date) {
+  const hora = new Date(ate).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
+  return new HttpException({ codigo: 'usuario_bloqueado',
+    mensagem: `Muitas tentativas com senha errada. Por segurança, o acesso foi bloqueado até ${hora}. Se esqueceu a senha, peça à administradora para redefinir.` }, 429);
+}
+
 @Controller('auth')
 export class AuthController {
   constructor(@Inject(DbService) private readonly db: DbService) {}
@@ -23,15 +31,21 @@ export class AuthController {
   @Publico()
   @Post('login')
   @HttpCode(200)
-  async login(@Body(new Validar(Login)) dto: z.infer<typeof Login>) {
+  async login(@Body(new Validar(Login)) dto: z.infer<typeof Login>, @Ip() ip: string) {
+    // tentativa e erro de senhas: por IP e por IP + e-mail. O bloqueio do usuário (5 erros
+    // seguidos = 15 minutos) fica no banco e vale para todos os servidores.
+    limitar(`login:${ip}`, 20, 60_000, 'Muitas tentativas de login. Aguarde um minuto e tente de novo.');
+    limitar(`login:${ip}:${dto.email.toLowerCase()}`, 8, 15 * 60_000, 'Muitas tentativas com este e-mail. Aguarde 15 minutos.');
     const master = !!config.master && dto.email.toLowerCase() === config.master.email;
     const u = master ? await this.loginMaster(dto) : await this.loginComum(dto);
     // mesma mensagem para usuário inexistente e senha errada (não revela quem tem conta)
     if (!u) throw new UnauthorizedException({ codigo: 'credenciais_invalidas', mensagem: 'E-mail ou senha incorretos.' });
 
-    await this.db.tx({ tenantId: u.tenant_id, usuarioId: u.id }, (tx) =>
-      tx.q('UPDATE usuario SET ultimo_acesso = now() WHERE id = $1', [u.id]),
-    );
+    if (master) {   // os demais já registram o acesso em registrar_tentativa_login
+      await this.db.tx({ tenantId: u.tenant_id, usuarioId: u.id }, (tx) =>
+        tx.q('UPDATE usuario SET ultimo_acesso = now() WHERE id = $1', [u.id]),
+      );
+    }
     const token = jwt.sign({ sub: u.id, tid: u.tenant_id, nome: u.nome, perfil: u.perfil, ...(master ? { master } : {}) },
       config.jwtSegredo, { expiresIn: config.jwtValidade as jwt.SignOptions['expiresIn'] });
     return { token, usuario: { id: u.id, nome: u.nome, perfil: u.perfil, master } };
@@ -41,7 +55,12 @@ export class AuthController {
     const u = await this.db.tx({}, (tx) =>
       tx.um('SELECT * FROM buscar_usuario_login($1, $2)', [dto.email, dto.empresa]),
     );
-    const ok = u?.ativo && u.senha_hash && (await bcrypt.compare(dto.senha, u.senha_hash));
+    if (!u) return undefined;
+    if (u.bloqueado_ate) throw bloqueado(u.bloqueado_ate);
+    const ok = !!(u.ativo && u.senha_hash && (await bcrypt.compare(dto.senha, u.senha_hash)));
+    const r = await this.db.tx({ tenantId: u.tenant_id }, (tx) =>
+      tx.um<{ ate: Date | null }>('SELECT registrar_tentativa_login($1, $2) AS ate', [u.id, ok]));
+    if (!ok && r?.ate) throw bloqueado(r.ate);
     return ok ? u : undefined;
   }
 
@@ -85,9 +104,9 @@ export class AuthController {
   @Get('me')
   async me(@Usuario() u: UsuarioLogado) {
     return this.db.tx({ tenantId: u.tenantId, usuarioId: u.id }, async (tx) => {
-      const empresa = await tx.um('SELECT nome, slug FROM tenant WHERE id = $1', [u.tenantId]);
+      const empresa = await tx.um('SELECT id, nome, slug, logo, prazos_eventos FROM tenant WHERE id = $1', [u.tenantId]);
       const menu = await tx.q(
-        `SELECT modulo, nome, acoes FROM vw_menu_usuario WHERE usuario_id = $1 ORDER BY ordem`,
+        `SELECT modulo, nome, acoes::text[] AS acoes FROM vw_menu_usuario WHERE usuario_id = $1 ORDER BY ordem`,
         [u.id],
       );
       return { usuario: u, empresa, menu };

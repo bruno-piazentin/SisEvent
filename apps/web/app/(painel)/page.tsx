@@ -4,20 +4,27 @@ import Link from 'next/link';
 import { api, fmt } from '@/lib/api';
 import { usePainel } from '@/components/Painel';
 import { ComparativoEventos } from '@/components/ComparativoEventos';
+import { CardsPrazo } from '@/components/PrazoEventos';
+import { CalendarioEventos } from '@/components/CalendarioEventos';
+import { Faixa, faixaDoEvento, inicioJanela, PRAZOS_PADRAO } from '@/lib/prazos';
 
 export default function Inicio() {
   const { me, pode } = usePainel();
   const [bi, setBi] = useState<any>(null);
   const [eventos, setEventos] = useState<any[]>([]);
+  const [faixa, setFaixa] = useState<Faixa | null>(null);
+  const prazos = me.empresa.prazos_eventos ?? PRAZOS_PADRAO;
 
   useEffect(() => {
     if (pode('BI')) api('/bi/indicadores').then(setBi).catch(() => undefined);
-    if (pode('M4')) api('/eventos?status=planejamento,confirmado,em_execucao,encerrado').then(setEventos).catch(() => undefined);
+    if (pode('M4')) {
+      const q = new URLSearchParams({ status: 'planejamento,confirmado,em_execucao,encerrado,fechado,cancelado', de: inicioJanela(prazos).toISOString() });
+      api<any[]>(`/eventos?${q}`).then((evs) => setEventos(evs.map((e) => ({ ...e, faixa: faixaDoEvento(e, prazos) })))).catch(() => undefined);
+    }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const mes = bi?.mensal?.[0];
   const ocup = bi?.ocupacao?.[0];
-  const emRisco = eventos.filter((e) => e.vagas_abertas > 0 && new Date(e.inicio).getTime() - Date.now() < 3 * 86400_000);
 
   return (
     <>
@@ -47,36 +54,16 @@ export default function Inicio() {
         </section>
       )}
 
-      {emRisco.length > 0 && (
-        <div className="aviso" style={{ marginBottom: 16 }}>
-          {emRisco.length} evento(s) nos próximos 3 dias ainda com vaga aberta: {emRisco.map((e) => e.nome).join(', ')}
+      {pode('M4') && <CardsPrazo eventos={eventos} prazos={prazos} selecionada={faixa} onSelecionar={setFaixa} />}
+
+      {pode('M4') && (
+        <div style={{ marginBottom: 16 }}>
+          <CalendarioEventos prazos={prazos} faixa={faixa} eventosFaixa={faixa ? eventos.filter((e) => e.faixa === faixa) : []}
+                             onLimparFaixa={() => setFaixa(null)} podeCriar={pode('M4', 'criar')} />
         </div>
       )}
 
       <div className="grade g2">
-        {pode('M4') && (
-          <section className="cartao">
-            <h2>Próximos eventos</h2>
-            {eventos.length === 0 && <p className="suave">Nenhum evento em andamento.</p>}
-            <table>
-              <tbody>
-                {eventos.slice(0, 8).map((e) => (
-                  <tr key={e.id}>
-                    <td>
-                      <Link href={`/eventos/${e.id}`}><strong>{e.nome}</strong></Link>
-                      <div className="suave pequeno">{e.cliente} · {e.praca} · {fmt.dataHora(e.inicio)}</div>
-                    </td>
-                    <td style={{ width: 140 }}>
-                      <div className="pequeno">{e.confirmados}/{e.vagas} confirmados</div>
-                      <div className="barra"><div style={{ width: `${e.vagas ? (100 * e.confirmados) / e.vagas : 0}%` }} /></div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </section>
-        )}
-
         {bi?.clientes?.length > 0 && (
           <section className="cartao">
             <h2>Margem por cliente</h2>

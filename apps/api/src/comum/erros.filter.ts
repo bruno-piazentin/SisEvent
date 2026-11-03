@@ -24,6 +24,12 @@ const MAPA_PG: Record<string, { status: number; codigo: string; mensagem?: strin
   P0008: { status: 409, codigo: 'pagamento_enviado' },
 };
 
+// Duplicidade com mensagem própria, pelo nome da restrição
+const DUPLICADOS: Record<string, string> = {
+  profissional_cpf_unico: 'Já existe um profissional com este CPF.',
+  profissional_tenant_id_celular_key: 'Já existe um profissional com este celular.',
+};
+
 @Catch()
 export class ErrosFilter implements ExceptionFilter {
   private readonly log = new Logger('Erro');
@@ -46,7 +52,7 @@ export class ErrosFilter implements ExceptionFilter {
     if (pg) {
       return res.status(pg.status).json({
         codigo: pg.codigo,
-        mensagem: pg.mensagem ?? erro.message,
+        mensagem: (erro.code === '23505' && DUPLICADOS[erro.constraint]) || pg.mensagem || erro.message,
         dica: erro.hint,
       });
     }

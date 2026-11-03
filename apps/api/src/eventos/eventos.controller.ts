@@ -1,14 +1,14 @@
-import { BadRequestException, Body, Controller, Delete, Get, NotFoundException, Param, Patch, Post, Query, Req, Res, Inject } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Delete, Get, NotFoundException, Param, Patch, Post, Put, Query, Req, Res, Inject } from '@nestjs/common';
 import type { Response } from 'express';
 import { z } from 'zod';
 import { DbService, ContextoDb } from '../db/db.service';
-import { Validar, uuid, dinheiro } from '../comum/validacao';
+import { Avaliacao, Validar, alturaCm, uuid, dinheiro } from '../comum/validacao';
 import { Ctx, Requer, Usuario, UsuarioLogado } from '../auth/decorators';
 import { filtroEscopoEventos, garantirAcessoEvento } from './escopo';
 
 const Requisitos = z.object({
-  altura_min: z.number().int().optional(),
-  altura_max: z.number().int().optional(),
+  altura_min: alturaCm.optional(),
+  altura_max: alturaCm.optional(),
   generos: z.array(z.string()).optional(),
   idade_min: z.number().int().optional(),
   idade_max: z.number().int().optional(),
@@ -121,6 +121,49 @@ export class EventosController {
         p,
       ),
     );
+  }
+
+  /** Quem trabalhou no evento: a nota que a empresa deu a cada um e a que cada um deu ao evento */
+  @Get('eventos/:id/avaliacoes')
+  @Requer('M4', 'ver')
+  avaliacoes(@Ctx() ctx: ContextoDb, @Usuario() u: UsuarioLogado, @Param('id') id: string) {
+    uuid.parse(id);
+    return this.db.tx(ctx, async (tx) => {
+      await garantirAcessoEvento(tx, u, id);
+      return tx.q(
+        `SELECT a.id AS alocacao_id, a.profissional_id, COALESCE(pr.nome_artistico, pr.nome) AS profissional,
+                f.nome AS funcao, t.nome AS turno, ap.status AS presenca, ap.checkin_em, ap.checkout_em,
+                av.nota, av.observacao, av.avaliado_em, us.nome AS avaliado_por,
+                ae.nota AS nota_evento, ae.comentario AS comentario_evento
+           FROM alocacao a JOIN posto p ON p.id = a.posto_id JOIN turno t ON t.id = p.turno_id
+           JOIN funcao f ON f.id = p.funcao_id JOIN profissional pr ON pr.id = a.profissional_id
+           JOIN apontamento ap ON ap.alocacao_id = a.id
+           LEFT JOIN avaliacao av ON av.alocacao_id = a.id
+           LEFT JOIN usuario us ON us.id = av.avaliado_por
+           LEFT JOIN avaliacao_evento ae ON ae.evento_id = t.evento_id AND ae.profissional_id = a.profissional_id
+          WHERE t.evento_id = $1 AND ap.checkin_em IS NOT NULL
+          ORDER BY t.inicio, pr.nome`, [id]);
+    });
+  }
+
+  /** A empresa avalia o profissional naquele trabalho (obrigatório para fechar o evento) */
+  @Put('alocacoes/:id/avaliacao')
+  @Requer('M5', 'editar')
+  avaliar(@Ctx() ctx: ContextoDb, @Usuario() u: UsuarioLogado, @Param('id') id: string,
+          @Body(new Validar(Avaliacao)) dto: z.infer<typeof Avaliacao>) {
+    uuid.parse(id);
+    return this.db.tx(ctx, async (tx) => {
+      const ev = await tx.um<{ evento_id: string }>(
+        'SELECT t.evento_id FROM alocacao a JOIN posto p ON p.id = a.posto_id JOIN turno t ON t.id = p.turno_id WHERE a.id = $1', [id]);
+      if (!ev) throw new NotFoundException({ mensagem: 'Escala não encontrada.' });
+      await garantirAcessoEvento(tx, u, ev.evento_id);
+      return tx.um(
+        `INSERT INTO avaliacao (alocacao_id, nota, observacao, avaliado_por) VALUES ($1, $2, $3, app_usuario())
+         ON CONFLICT (alocacao_id) DO UPDATE SET nota = EXCLUDED.nota, observacao = EXCLUDED.observacao,
+                avaliado_por = EXCLUDED.avaliado_por, avaliado_em = now()
+         RETURNING *`,
+        [id, dto.nota, dto.comentario || null]);
+    });
   }
 
   @Get('eventos/:id')

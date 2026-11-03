@@ -1,42 +1,13 @@
 import { BadRequestException, Body, ConflictException, Controller, Delete, Get, NotFoundException, Param, Patch, Post, Query,
-  ServiceUnavailableException, Inject } from '@nestjs/common';
+  Req, ServiceUnavailableException, Inject } from '@nestjs/common';
 import { z } from 'zod';
 import { DbService, ContextoDb } from '../db/db.service';
-import { RedesSociais, Validar, uuid } from '../comum/validacao';
+import { DadosCadastrais, Validar, cnpjValido, cpfValido, uuid } from '../comum/validacao';
 import { Ctx, Requer } from '../auth/decorators';
 
 const TIPOS_CLIENTE = ['agencia', 'produtora', 'industria', 'representante', 'revenda', 'supermercado', 'outro'] as const;
 
-/** Dígitos verificadores do CPF */
-function cpfValido(c: string) {
-  if (!/^\d{11}$/.test(c) || /^(\d)\1{10}$/.test(c)) return false;
-  for (const n of [9, 10]) {
-    let s = 0;
-    for (let i = 0; i < n; i++) s += Number(c[i]) * (n + 1 - i);
-    if (((s * 10) % 11) % 10 !== Number(c[n])) return false;
-  }
-  return true;
-}
-
-/** Dígitos verificadores do CNPJ */
-function cnpjValido(c: string) {
-  if (!/^\d{14}$/.test(c) || /^(\d)\1{13}$/.test(c)) return false;
-  const dv = (n: number) => {
-    let s = 0;
-    // pesos 2..9 aplicados da direita para a esquerda, recomeçando em 2
-    for (let i = 0; i < n; i++) s += Number(c[i]) * (((n - 1 - i) % 8) + 2);
-    const r = s % 11;
-    return r < 2 ? 0 : 11 - r;
-  };
-  return dv(12) === Number(c[12]) && dv(13) === Number(c[13]);
-}
-
-const Cliente = z.object({
-  pessoa: z.enum(['juridica', 'fisica']).default('juridica'),
-  razao_social: z.string().min(2),           // pessoa física: nome completo
-  nome_fantasia: z.string().nullish(),       // pessoa física: como é chamada
-  cnpj: z.string().regex(/^\d{14}$/, 'CNPJ com 14 dígitos').nullish(),
-  cpf: z.string().regex(/^\d{11}$/, 'CPF com 11 dígitos').nullish(),
+const Cliente = DadosCadastrais.extend({
   tipo: z.enum(TIPOS_CLIENTE).default('outro'),
   // marcas que a empresa representa / vende — gravadas no catálogo "marca"
   marcas: z.array(z.string().trim().min(1).max(80)).max(200).optional(),
@@ -44,16 +15,6 @@ const Cliente = z.object({
   cor_primaria: z.string().regex(/^#[0-9a-fA-F]{6}$/).nullish(),
   logo_url: z.string().url().nullish(),
   prazo_pagamento_dias: z.number().int().min(0).max(180).default(30),
-  telefone: z.string().nullish(),
-  email: z.string().email('E-mail da empresa inválido').nullish(),
-  redes_sociais: RedesSociais.optional(),
-  cep: z.string().regex(/^\d{8}$/, 'CEP com 8 dígitos').nullish(),
-  logradouro: z.string().nullish(),
-  numero: z.string().nullish(),
-  complemento: z.string().nullish(),
-  bairro: z.string().nullish(),
-  cidade: z.string().nullish(),
-  uf: z.string().length(2).transform((s) => s.toUpperCase()).nullish(),
   ativo: z.boolean().optional(),
   contatos: z.array(z.lazy(() => Colaborador)).optional(),
 });
@@ -170,8 +131,9 @@ export class CadastrosController {
 
   @Get('clientes')
   @Requer('M3', 'ver')
-  clientes(@Ctx() ctx: ContextoDb, @Query('marca') marca?: string) {
-    return this.db.tx(ctx, (tx) =>
+  async clientes(@Ctx() ctx: ContextoDb, @Req() req: any, @Query('marca') marca?: string) {
+    const verCpf = await req.podeDadosPessoais();
+    const lista = await this.db.tx(ctx, (tx) =>
       tx.q(`SELECT c.id, c.pessoa, c.razao_social, c.nome_fantasia, c.cnpj, c.cpf, c.tipo, c.ativo, ag.nome_fantasia AS agencia,
                    c.telefone, c.email, c.redes_sociais, c.cep, c.logradouro, c.numero, c.complemento, c.bairro, c.cidade, c.uf, c.prazo_pagamento_dias,
                    (SELECT count(*) FROM cliente_contato ct WHERE ct.cliente_id = c.id AND ct.ativo)::int AS colaboradores,
@@ -185,6 +147,9 @@ export class CadastrosController {
                       WHERE cm.cliente_id = c.id AND m.nome_busca LIKE '%' || trim(normalizar_busca($1)) || '%'))
              ORDER BY c.ativo DESC, COALESCE(c.nome_fantasia, c.razao_social)`, [marca?.trim() || null]),
     );
+    // CPF de cliente pessoa física é dado pessoal (permissão DP); o CNPJ é público e continua visível
+    if (!verCpf) for (const c of lista) delete c.cpf;
+    return lista;
   }
 
   /** Catálogo de marcas (autocompletar e busca por marca), com quantos clientes representam cada uma */
@@ -205,8 +170,9 @@ export class CadastrosController {
 
   @Get('clientes/:id')
   @Requer('M3', 'ver')
-  cliente(@Ctx() ctx: ContextoDb, @Param('id') id: string) {
+  async cliente(@Ctx() ctx: ContextoDb, @Req() req: any, @Param('id') id: string) {
     uuid.parse(id);
+    const verCpf = await req.podeDadosPessoais();
     return this.db.tx(ctx, async (tx) => {
       const c = await tx.um(
         `SELECT c.*, u.nome AS status_alterado_por FROM cliente c
@@ -215,6 +181,7 @@ export class CadastrosController {
                                ORDER BY a.em DESC LIMIT 1) u ON true
           WHERE c.id = $1 AND c.excluido_em IS NULL`, [id]);
       if (!c) throw new NotFoundException({ mensagem: 'Cliente não encontrado ou excluído.' });
+      if (!verCpf) { delete c.cpf; c.ocultos = ['cpf']; }
       c.agencia = c.agencia_id ? (await tx.um('SELECT COALESCE(nome_fantasia, razao_social) AS nome FROM cliente WHERE id = $1', [c.agencia_id]))?.nome : null;
       c.contatos = await tx.q('SELECT * FROM cliente_contato WHERE cliente_id = $1 ORDER BY ativo DESC, principal DESC, nome, sobrenome', [id]);
       c.marcas = (await tx.um(`SELECT ${SQL_MARCAS_CLIENTE} AS marcas FROM cliente c WHERE c.id = $1`, [id]))!.marcas;
@@ -235,7 +202,8 @@ export class CadastrosController {
 
   @Post('clientes')
   @Requer('M3', 'criar')
-  novoCliente(@Ctx() ctx: ContextoDb, @Body(new Validar(Cliente)) dto: z.infer<typeof Cliente>) {
+  async novoCliente(@Ctx() ctx: ContextoDb, @Req() req: any, @Body(new Validar(Cliente)) dto: z.infer<typeof Cliente>) {
+    if (!(await req.podeDadosPessoais())) delete dto.cpf;
     return this.db.tx(ctx, async (tx) => {
       await this.conferirDocumento(tx, dto);
       const campos = CAMPOS_CLIENTE.filter((k) => (dto as any)[k] !== undefined);
@@ -251,8 +219,9 @@ export class CadastrosController {
 
   @Patch('clientes/:id')
   @Requer('M3', 'editar')
-  editarCliente(@Ctx() ctx: ContextoDb, @Param('id') id: string, @Body(new Validar(Cliente.partial())) dto: Partial<z.infer<typeof Cliente>>) {
+  async editarCliente(@Ctx() ctx: ContextoDb, @Req() req: any, @Param('id') id: string, @Body(new Validar(Cliente.partial())) dto: Partial<z.infer<typeof Cliente>>) {
     uuid.parse(id);
+    if (!(await req.podeDadosPessoais())) delete dto.cpf;   // sem a permissão, o CPF gravado não muda
     return this.db.tx(ctx, async (tx) => {
       await this.conferirDocumento(tx, dto, id);
       const campos = CAMPOS_CLIENTE.filter((k) => (dto as any)[k] !== undefined);

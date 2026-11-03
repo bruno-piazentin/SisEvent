@@ -33,6 +33,7 @@ services:
     environment:
       DATABASE_URL: postgres://sisevent_api:${API_DB_PASSWORD:-api_dev}@db:5432/sisevent
       JWT_SECRET: ${JWT_SECRET:-troque-este-segredo-em-producao}
+      DADOS_CHAVE: ${DADOS_CHAVE:?defina DADOS_CHAVE no .env (gere com npm run gerar-chave em apps/api)}
       APP_URL: ${APP_URL:-http://localhost:3000}
       CORS_ORIGINS: ${APP_URL:-http://localhost:3000}
       METABASE_URL: ${METABASE_PUBLIC_URL:-http://localhost:3002}

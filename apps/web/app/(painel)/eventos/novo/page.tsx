@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
-import { ExigeModulo } from '@/components/Painel';
+import { ExigeModulo, usePainel, Voltar } from '@/components/Painel';
 import { Geolocalizacao } from '@/components/Geolocalizacao';
 import { prepararFoto } from '@/lib/imagem';
 import { CORES_CABELO, mascara, soDigitos, TIPOS_CABELO } from '@/lib/ui';
@@ -20,6 +20,7 @@ export default function NovoEvento() {
 
 function Form() {
   const router = useRouter();
+  const { voltar } = usePainel();
   const [cat, setCat] = useState<{ clientes: any[]; pracas: any[]; funcoes: any[] }>({ clientes: [], pracas: [], funcoes: [] });
   const [ev, setEv] = useState<any>({ status: 'planejamento', exige_qr: true, exige_geolocalizacao: false, tolerancia_atraso_min: 10 });
   const [turnos, setTurnos] = useState<Turno[]>([{ nome: 'Turno 1', inicio: '', fim: '', postos: [postoVazio()] }]);
@@ -28,6 +29,13 @@ function Form() {
   const [buscandoCep, setBuscandoCep] = useState(false);
   const [cepMsg, setCepMsg] = useState('');
   const [cepErro, setCepErro] = useState(false);
+
+  // atalho do calendário da tela inicial (?data=AAAA-MM-DD): o 1º turno já vem nesse dia, das 08:00 às 18:00
+  useEffect(() => {
+    const data = new URLSearchParams(window.location.search).get('data');
+    if (!data || !/^\d{4}-\d{2}-\d{2}$/.test(data)) return;
+    setTurnos((ts) => ts.map((t, i) => (i === 0 && !t.inicio && !t.fim ? { ...t, inicio: `${data}T08:00`, fim: `${data}T18:00` } : t)));
+  }, []);
   const campoEndereco = useRef<HTMLInputElement>(null);
 
   /** CEP preenche o endereço e, se a cidade for uma praça cadastrada, já seleciona a praça */
@@ -97,6 +105,7 @@ function Form() {
 
   return (
     <form className="grade" onSubmit={salvar}>
+      <Voltar para="/eventos" />
       <div className="topo"><h1>Novo evento</h1></div>
       <section className="cartao form">
         <h2>Evento</h2>
@@ -164,7 +173,7 @@ function Form() {
           </div>
           <div className="tabela">
             <table>
-              <thead><tr><th>Função</th><th>Qtd</th><th>Diária paga</th><th>Diária cobrada</th><th>Altura mín.</th><th>Cabelo (opcional)</th><th>Uniforme</th><th></th></tr></thead>
+              <thead><tr><th>Função</th><th>Qtd</th><th>Diária paga</th><th>Diária cobrada</th><th>Altura mín. (cm)</th><th>Cabelo (opcional)</th><th>Uniforme</th><th></th></tr></thead>
               <tbody>
                 {t.postos.map((p, j) => (
                   <tr key={j}>
@@ -172,7 +181,7 @@ function Form() {
                     <td style={{ width: 80 }}><input type="number" min={1} value={p.quantidade} onChange={(e) => mudaPosto(i, j, 'quantidade', e.target.value)} /></td>
                     <td><input type="number" step="0.01" value={p.diaria_custo} onChange={(e) => mudaPosto(i, j, 'diaria_custo', e.target.value)} /></td>
                     <td><input type="number" step="0.01" value={p.diaria_venda} onChange={(e) => mudaPosto(i, j, 'diaria_venda', e.target.value)} /></td>
-                    <td style={{ width: 100 }}><input type="number" value={p.requisitos.altura_min ?? ''}
+                    <td style={{ width: 100 }}><input type="number" step="any" placeholder="170" value={p.requisitos.altura_min ?? ''}
                       onChange={(e) => mudaPosto(i, j, 'requisitos', { ...p.requisitos, altura_min: e.target.value ? Number(e.target.value) : undefined })} /></td>
                     <td style={{ minWidth: 150 }}>
                       <select aria-label="Cor do cabelo" value={p.requisitos.cabelo_cores?.[0] ?? ''}
@@ -202,7 +211,10 @@ function Form() {
           {venda > 0 && ` · margem ${(100 * (venda - custo) / venda).toFixed(1)}%`}</span>
       </div>
       {erro && <div className="aviso erro">{erro}</div>}
-      <div><button className="btn primario">Criar evento</button></div>
+      <div style={{ display: 'flex', gap: 8 }}>
+        <button className="btn primario">Criar evento</button>
+        <button type="button" className="btn" onClick={() => voltar('/eventos')}>Cancelar</button>
+      </div>
     </form>
   );
 }

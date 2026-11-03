@@ -6,6 +6,10 @@ import { CORES_CABELO, TIPOS_CABELO } from '@/lib/ui';
 import { CampoRedesSociais } from './RedesSociais';
 import { GaleriaFotos } from './GaleriaFotos';
 import { prepararFoto } from '@/lib/imagem';
+import { usePainel } from './Painel';
+
+/** Campos que só quem tem a permissão "Dados pessoais" (DP) vê e altera */
+const DADOS_PESSOAIS = ['cpf', 'rg', 'data_nascimento', 'chave_pix', 'tipo_chave_pix', 'banco', 'agencia', 'conta', 'cnpj_mei'];
 
 const MEIOS: [string, string][] = [
   ['carro_proprio', 'Carro próprio'], ['moto_propria', 'Moto própria'], ['transporte_publico', 'Transporte público'],
@@ -16,8 +20,10 @@ const TAMANHOS = ['PP', 'P', 'M', 'G', 'GG', 'XG', 'XGG'];
 type Disp = { dia_semana: number; hora_inicio: string; hora_fim: string };
 
 /** Ficha completa do profissional — criação e edição. */
-export function FormProfissional({ inicial }: { inicial?: any }) {
+export function FormProfissional({ inicial, onCancelar }: { inicial?: any; onCancelar?: () => void }) {
   const router = useRouter();
+  const { pode } = usePainel();
+  const verDados = inicial ? !inicial.ocultos : pode('DP');
   const [p, setP] = useState<any>(() => ({
     meios_locomocao: [], idiomas: ['português'], status: 'em_teste', ...inicial,
     data_nascimento: inicial?.data_nascimento?.slice(0, 10) ?? '',
@@ -60,8 +66,9 @@ export function FormProfissional({ inicial }: { inicial?: any }) {
     const limpo = Object.fromEntries(Object.entries(p).map(([k, v]) => [k, v === '' ? null : v]));
     for (const k of ['id', 'tenant_id', 'criado_em', 'atualizado_em', 'consentimento_lgpd_em', 'origem', 'funcoes', 'pracas_aceitas',
       'disponibilidade', 'documentos', 'historico', 'avaliacoes', 'banco', 'agencia', 'conta']) delete limpo[k];
-    // campos mascarados (sem permissão) não são reenviados
-    for (const [k, v] of Object.entries(limpo)) if (typeof v === 'string' && v.includes('***')) delete limpo[k];
+    // dados pessoais ocultos (sem permissão) não são enviados
+    delete limpo.ocultos;
+    if (!verDados) for (const k of DADOS_PESSOAIS) delete limpo[k];
     if (limpo.peso_kg !== null && limpo.peso_kg !== undefined) limpo.peso_kg = Number(limpo.peso_kg); // numeric vem como texto
     const corpo = { ...limpo, funcoes, pracas_aceitas: pracasAceitas, disponibilidade: disp };
     try {
@@ -91,14 +98,14 @@ export function FormProfissional({ inicial }: { inicial?: any }) {
         <div className="linha">
           <label>Nome completo *<input required {...campo('nome')} /></label>
           <label>Nome artístico<input {...campo('nome_artistico')} /></label>
-          <label>Nascimento<input type="date" {...campo('data_nascimento')} /></label>
+          {verDados && <label>Nascimento<input type="date" {...campo('data_nascimento')} /></label>}
           <label>Gênero
             <select {...campo('genero')}><option value="">—</option><option value="feminino">Feminino</option><option value="masculino">Masculino</option><option value="nao_binario">Não binário</option></select>
           </label>
         </div>
         <div className="linha">
-          <label>CPF (só números)<input inputMode="numeric" maxLength={14} {...campo('cpf')} /></label>
-          <label>RG<input {...campo('rg')} /></label>
+          {verDados && <label>CPF (só números)<input inputMode="numeric" maxLength={14} {...campo('cpf')} /></label>}
+          {verDados && <label>RG<input {...campo('rg')} /></label>}
           <label>Status
             <select {...campo('status')}><option value="em_teste">Em teste</option><option value="ativo">Ativo</option><option value="inativo">Inativo</option><option value="bloqueado">Bloqueado</option></select>
           </label>
@@ -108,7 +115,7 @@ export function FormProfissional({ inicial }: { inicial?: any }) {
       <section className="cartao form">
         <h2>Contato e base</h2>
         <div className="linha">
-          <label>Celular (WhatsApp) *<input required placeholder="+5543999990000" {...campo('celular')} /></label>
+          <label>Celular (WhatsApp) *<input required type="tel" placeholder="(43) 99999-0000" {...campo('celular')} /></label>
           <label>E-mail<input type="email" {...campo('email')} /></label>
         </div>
         <div className="suave pequeno" style={{ fontWeight: 600 }}>Redes sociais</div>
@@ -135,7 +142,7 @@ export function FormProfissional({ inicial }: { inicial?: any }) {
       <section className="cartao form">
         <h2>Medidas e aparência</h2>
         <div className="linha">
-          <label>Altura (cm)<input type="number" {...campo('altura_cm', 'numero')} /></label>
+          <label>Altura (cm)<input type="number" step="any" placeholder="170" {...campo('altura_cm', 'numero')} /></label>
           <label>Peso (kg)<input type="number" step="0.1" {...campo('peso_kg', 'numero')} /></label>
           <label>Manequim<input type="number" {...campo('manequim', 'numero')} /></label>
           <label>Camiseta<select {...campo('tamanho_camiseta')}><option value="">—</option>{TAMANHOS.map((t) => <option key={t}>{t}</option>)}</select></label>
@@ -228,9 +235,10 @@ export function FormProfissional({ inicial }: { inicial?: any }) {
           <label>Forma de contratação
             <select {...campo('forma_contratacao')}><option value="">—</option><option value="autonomo">Autônomo (RPA)</option><option value="mei">MEI</option><option value="clt">CLT</option></select>
           </label>
-          <label>Chave PIX<input {...campo('chave_pix')} /></label>
-          <label>CNPJ MEI<input {...campo('cnpj_mei')} /></label>
+          {verDados && <label>Chave PIX<input {...campo('chave_pix')} /></label>}
+          {verDados && <label>CNPJ MEI<input {...campo('cnpj_mei')} /></label>}
         </div>
+        {!verDados && <p className="suave pequeno">CPF, RG, nascimento e dados bancários ficam ocultos: é preciso a permissão "Dados pessoais".</p>}
       </section>
 
       <section className="cartao form">
@@ -256,7 +264,10 @@ export function FormProfissional({ inicial }: { inicial?: any }) {
       </section>
 
       {erro && <div className="aviso erro">{erro}</div>}
-      <div><button className="btn primario" disabled={salvando}>{salvando ? 'Salvando…' : 'Salvar ficha'}</button></div>
+      <div style={{ display: 'flex', gap: 8 }}>
+        <button className="btn primario" disabled={salvando}>{salvando ? 'Salvando…' : 'Salvar ficha'}</button>
+        {onCancelar && <button type="button" className="btn" disabled={salvando} onClick={onCancelar}>Cancelar</button>}
+      </div>
     </form>
   );
 }

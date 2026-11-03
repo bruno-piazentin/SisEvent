@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { DbService, ContextoDb } from '../db/db.service';
 import { Validar, uuid, dinheiro } from '../comum/validacao';
 import { Ctx, Requer, Usuario, UsuarioLogado } from '../auth/decorators';
+import { decifrar } from '../comum/cripto';
 
 /** M7 — Custo, fechamento, pagamento ao profissional, faturamento e margem */
 @Controller()
@@ -86,21 +87,29 @@ export class FinanceiroController {
   /** Contas a pagar de freelancer */
   @Get('pagamentos')
   @Requer('M7', 'ver')
-  pagamentos(@Ctx() ctx: ContextoDb, @Query(new Validar(z.object({ status: z.string().optional() }))) q: { status?: string }) {
-    return this.db.tx(ctx, (tx) =>
+  async pagamentos(@Ctx() ctx: ContextoDb, @Req() req: any, @Query(new Validar(z.object({ status: z.string().optional() }))) q: { status?: string }) {
+    const verDadosPessoais = await req.podeDadosPessoais();
+    const itens = await this.db.tx(ctx, (tx) =>
       tx.q(`SELECT pg.id, pg.valor, pg.status, pg.chave_pix, pg.pago_em, pg.lote_id, pr.nome AS profissional,
                    pr.forma_contratacao, e.nome AS evento, (SELECT min(inicio) FROM turno WHERE evento_id = e.id) AS data_evento
               FROM pagamento_profissional pg JOIN profissional pr ON pr.id = pg.profissional_id JOIN evento e ON e.id = pg.evento_id
              WHERE ($1::text IS NULL OR pg.status::text = $1)
              ORDER BY data_evento DESC, pr.nome`, [q.status ?? null]));
+    // chave PIX é dado pessoal (permissão DP): sem ela o campo não vem
+    for (const i of itens) if (verDadosPessoais) i.chave_pix = decifrar(i.chave_pix); else delete i.chave_pix;
+    return itens;
   }
 
   /** Lote de pagamento (PIX em lote): agrupa pendentes e devolve CSV pronto para o banco */
   @Post('lotes-pagamento')
   @Requer('M7', 'aprovar')
-  lote(@Ctx() ctx: ContextoDb,
+  async lote(@Ctx() ctx: ContextoDb, @Req() req: any,
        @Body(new Validar(z.object({ descricao: z.string(), data_prevista: z.coerce.date(), pagamentos: z.array(uuid).min(1) })))
        dto: { descricao: string; data_prevista: Date; pagamentos: string[] }) {
+    // o arquivo do banco leva CPF e chave PIX
+    if (!(await req.podeDadosPessoais())) {
+      throw new ForbiddenException({ codigo: 'sem_dados_pessoais', mensagem: 'O lote de pagamento leva CPF e chave PIX: é preciso a permissão "Dados pessoais".' });
+    }
     return this.db.tx(ctx, async (tx) => {
       const lote = await tx.um<{ id: string }>(
         'INSERT INTO lote_pagamento (descricao, data_prevista, criado_por) VALUES ($1, $2, app_usuario()) RETURNING id',
@@ -110,7 +119,7 @@ export class FinanceiroController {
            FROM profissional pr
           WHERE pg.id = ANY($2::uuid[]) AND pg.status = 'pendente' AND pr.id = pg.profissional_id
           RETURNING pr.nome, pr.cpf, pg.chave_pix, pg.valor`, [lote!.id, dto.pagamentos]);
-      const csv = ['nome;cpf;chave_pix;valor', ...itens.map((i) => `${i.nome};${i.cpf ?? ''};${i.chave_pix ?? ''};${Number(i.valor).toFixed(2).replace('.', ',')}`)].join('\n');
+      const csv = ['nome;cpf;chave_pix;valor', ...itens.map((i) => `${i.nome};${decifrar(i.cpf) ?? ''};${decifrar(i.chave_pix) ?? ''};${Number(i.valor).toFixed(2).replace('.', ',')}`)].join('\n');
       return { lote_id: lote!.id, quantidade: itens.length, total: itens.reduce((s, i) => s + Number(i.valor), 0), csv };
     });
   }

@@ -3,6 +3,7 @@ import { use, useEffect, useState } from 'react';
 import { apiPublica, fmt } from '@/lib/api';
 import { lerToken } from '@/lib/token-profissional';
 import { registrarPonto, ResultadoPonto } from '@/lib/ponto';
+import { AvaliarEvento } from '@/components/Avaliacao';
 
 /**
  * Página aberta quando o profissional aponta a câmera nativa do celular para o QR do supervisor.
@@ -15,6 +16,7 @@ export default function CheckinPorQr({ params }: { params: Promise<{ evento: str
   const [res, setRes] = useState<ResultadoPonto | null>(null);
   const [carregado, setCarregado] = useState(false);
   const [enviando, setEnviando] = useState(false);
+  const [avaliado, setAvaliado] = useState('');
 
   useEffect(() => {
     const t = lerToken();
@@ -39,7 +41,7 @@ export default function CheckinPorQr({ params }: { params: Promise<{ evento: str
   if (!token) return (
     <div className="mobile" style={{ paddingTop: 40 }}>
       <h2>Primeiro acesso neste celular</h2>
-      <p>Abra o link de acesso que você recebeu da Rafa Dutra Eventos pelo WhatsApp e depois escaneie o QR de novo.</p>
+      <p>Abra o link de acesso que você recebeu pelo WhatsApp e depois escaneie o QR de novo.</p>
     </div>
   );
 
@@ -48,6 +50,13 @@ export default function CheckinPorQr({ params }: { params: Promise<{ evento: str
       <div style={{ fontSize: '4rem' }}>{res.ok ? (res.offline ? '⏳' : '✓') : '!'}</div>
       <div className={`aviso ${res.ok ? (res.offline ? '' : 'ok') : 'erro'}`}>{res.mensagem}</div>
       {res.ok && !res.offline && res.em && <p className="suave">Registrado às {fmt.hora(res.em)}</p>}
+      {/* saída registrada: a avaliação do evento é obrigatória (se sair daqui, fica pendente na página dele) */}
+      {res.ok && !res.offline && res.tipo === 'checkout' && !conv?.nota_evento && (
+        avaliado ? <div className="aviso ok" style={{ marginTop: 16 }}>{avaliado}</div>
+          : <div className="convocacao" style={{ marginTop: 16, textAlign: 'left' }}>
+              <AvaliarEvento token={token} eventoId={evento} evento={conv?.evento} onAvaliado={setAvaliado} />
+            </div>
+      )}
       <a className="btn grande" style={{ marginTop: 20 }} href={`/p/${token}`}>Ver meus eventos</a>
     </div>
   );

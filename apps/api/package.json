@@ -10,6 +10,8 @@
     "migrate": "tsx scripts/migrate.ts",
     "seed": "tsx scripts/migrate.ts --seed",
     "hash-senha": "tsx scripts/hash-senha.ts",
+    "gerar-chave": "node -e \"console.log(require('crypto').randomBytes(32).toString('base64'))\"",
+    "cifrar-dados": "tsx scripts/cifrar-dados.ts",
     "test:db": "psql \"$DATABASE_URL\" -v ON_ERROR_STOP=1 -f db/tests/regras_negocio.sql",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },

@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { api, fmt } from '@/lib/api';
 import { baixarCsv, documentoCliente, enderecoCompleto, mascara, NOME_TIPO_CLIENTE } from '@/lib/ui';
-import { ExigeModulo, usePainel } from '@/components/Painel';
+import { ExigeModulo, usePainel, Voltar } from '@/components/Painel';
 import { redesEmTexto } from '@/components/RedesSociais';
 
 export default function RelatorioClientes() {
@@ -35,6 +35,7 @@ function Relatorio() {
 
   return (
     <div className="relatorio">
+      <Voltar para="/clientes" />
       <div className="topo nao-imprimir">
         <div><div className="suave pequeno"><Link href="/clientes">Clientes</Link> / Relatórios</div><h1>Relatórios de clientes</h1></div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>

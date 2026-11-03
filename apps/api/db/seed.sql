@@ -13,7 +13,7 @@ SELECT criar_perfis_padrao('00000000-0000-0000-0000-000000000001');
 
 -- Módulos liberados: Fase 1 + BI + check-in (M6). M2, M8 e M9 ficam bloqueados até a liberação.
 INSERT INTO modulo_liberado (tenant_id, modulo)
-SELECT '00000000-0000-0000-0000-000000000001', m FROM unnest(ARRAY['M1','M3','M4','M5','M6','M7','BI']) m;
+SELECT '00000000-0000-0000-0000-000000000001', m FROM unnest(ARRAY['M1','M3','M4','M5','M6','M7','BI','DP']) m;
 
 INSERT INTO regra_custo (tenant_id) VALUES ('00000000-0000-0000-0000-000000000001');
 

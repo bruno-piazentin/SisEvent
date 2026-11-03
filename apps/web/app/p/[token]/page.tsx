@@ -4,6 +4,8 @@ import { apiPublica, fmt } from '@/lib/api';
 import { salvarToken } from '@/lib/token-profissional';
 import { pendentes, sincronizar, ouvirConexao } from '@/lib/fila-offline';
 import { interpretarQr, leitorDisponivel, lerQrDaCamera, registrarPonto } from '@/lib/ponto';
+import { LogoEmpresa } from '@/components/Marca';
+import { AvaliarEvento, SeloNota } from '@/components/Avaliacao';
 
 /**
  * Área do profissional — aberta pelo link recebido no WhatsApp. Sem senha, sem instalar nada.
@@ -53,14 +55,29 @@ export default function AreaProfissional({ params }: { params: Promise<{ token: 
 
   const pendentesResposta = dados.convocacoes.filter((c: any) => c.status === 'convidado');
   const confirmadas = dados.convocacoes.filter((c: any) => c.status === 'confirmado');
+  // avaliações obrigatórias que não estão num cartão abaixo (eventos de outros dias)
+  const noCartao = new Set(confirmadas.filter((c: any) => c.checkout_em).map((c: any) => c.evento_id));
+  const avaliarNoTopo = (dados.avaliacoes_pendentes ?? []).filter((a: any) => !noCartao.has(a.evento_id));
+  const avaliado = (texto: string) => { setAviso({ ok: true, texto }); carregar(); };
 
   return (
     <div className="mobile">
-      <div className="suave pequeno">Rafa Dutra Eventos</div>
+      {dados.empresa && (
+        <div className="suave pequeno" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <LogoEmpresa nome={dados.empresa.nome} logo={dados.empresa.logo} tamanho={32} />{dados.empresa.nome}
+        </div>
+      )}
       <div className="saudacao">Olá, {dados.profissional.nome.split(' ')[0]}!</div>
 
       {fila > 0 && <div className="aviso" style={{ marginTop: 10 }}>{fila} registro(s) aguardando internet para enviar.</div>}
       {aviso && <div className={`aviso ${aviso.ok ? 'ok' : 'erro'}`} style={{ marginTop: 10 }}>{aviso.texto}</div>}
+
+      {avaliarNoTopo.length > 0 && <h2 style={{ marginTop: 20 }}>Avalie seus eventos</h2>}
+      {avaliarNoTopo.map((a: any) => (
+        <div className="convocacao" key={a.evento_id}>
+          <AvaliarEvento token={token} eventoId={a.evento_id} evento={a.evento} onAvaliado={avaliado} />
+        </div>
+      ))}
 
       {pendentesResposta.length > 0 && <h2 style={{ marginTop: 20 }}>Novas convocações</h2>}
       {pendentesResposta.map((c: any) => (
@@ -79,6 +96,9 @@ export default function AreaProfissional({ params }: { params: Promise<{ token: 
         <div className="convocacao" key={c.alocacao_id}>
           <Cabecalho c={c} />
           <Ponto token={token} c={c} aoRegistrar={(r) => { setAviso({ ok: r.ok, texto: r.mensagem }); setFila(pendentes().length); carregar(); }} />
+          {c.checkout_em && (c.nota_evento
+            ? <div className="pequeno" style={{ marginTop: 8 }}>Sua avaliação do evento: <SeloNota nota={c.nota_evento} /></div>
+            : <div style={{ marginTop: 12 }}><AvaliarEvento token={token} eventoId={c.evento_id} onAvaliado={avaliado} /></div>)}
         </div>
       ))}
 

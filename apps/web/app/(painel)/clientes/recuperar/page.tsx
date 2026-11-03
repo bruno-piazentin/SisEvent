@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { api, fmt } from '@/lib/api';
 import { documentoCliente, mascara, NOME_TIPO_CLIENTE, soDigitos } from '@/lib/ui';
-import { ExigeModulo, usePainel } from '@/components/Painel';
+import { ExigeModulo, usePainel, Voltar } from '@/components/Painel';
 import { Confirmar } from '@/components/Confirmar';
 
 export default function RecuperarCliente() {
@@ -38,6 +38,7 @@ function Recuperar() {
 
   return (
     <>
+      <Voltar para="/clientes" />
       <div className="topo">
         <div><div className="suave pequeno"><Link href="/clientes">Clientes</Link> / Recuperar exclusão</div>
           <h1>Recuperar cliente excluído</h1>
