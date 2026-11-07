@@ -1,9 +1,9 @@
-import { BadRequestException, Body, Controller, Delete, Get, NotFoundException, Param, Patch, Post, Put, Query, Req, Res, Inject } from '@nestjs/common';
+import { BadRequestException, Body, ConflictException, Controller, Delete, Get, NotFoundException, Param, Patch, Post, Put, Query, Req, Res, Inject } from '@nestjs/common';
 import type { Response } from 'express';
 import { z } from 'zod';
 import { DbService, ContextoDb } from '../db/db.service';
 import { Avaliacao, Validar, alturaCm, uuid, dinheiro } from '../comum/validacao';
-import { Ctx, Requer, Usuario, UsuarioLogado } from '../auth/decorators';
+import { Ctx, Requer, Usuario, UsuarioLogado, EscopoEvento } from '../auth/decorators';
 import { filtroEscopoEventos, garantirAcessoEvento } from './escopo';
 
 const Requisitos = z.object({
@@ -230,9 +230,22 @@ export class EventosController {
 
   @Patch('eventos/:id')
   @Requer('M4', 'editar')
+  @EscopoEvento('evento')
   editar(@Ctx() ctx: ContextoDb, @Param('id') id: string, @Body(new Validar(EventoBase.partial())) dto: Partial<z.infer<typeof EventoBase>>) {
     uuid.parse(id);
     return this.db.tx(ctx, async (tx) => {
+      // evento que já passou pelo fechamento (tem pagamento ou fatura) só muda de status pelo financeiro:
+      // cancelar aqui deixaria os pagamentos pendentes e tiraria o evento da margem
+      if (dto.status !== undefined) {
+        const atual = await tx.um<{ status: string; tem_financeiro: boolean }>(
+          `SELECT e.status, EXISTS (SELECT 1 FROM pagamento_profissional WHERE evento_id = e.id)
+                         OR EXISTS (SELECT 1 FROM fatura_cliente WHERE evento_id = e.id) AS tem_financeiro
+             FROM evento e WHERE e.id = $1 FOR UPDATE`, [id]);
+        if (!atual) throw new NotFoundException({ mensagem: 'Evento não encontrado.' });
+        if (atual.tem_financeiro && dto.status !== atual.status) {
+          throw new ConflictException({ codigo: 'status_invalido', mensagem: 'Este evento já teve fechamento: o status muda pelo financeiro (fechar de novo).' });
+        }
+      }
       const campos = CAMPOS_EVENTO.filter((k) => (dto as any)[k] !== undefined);
       if (campos.length) {
         const r = await tx.um(
@@ -251,6 +264,7 @@ export class EventosController {
 
   @Post('eventos/:id/turnos')
   @Requer('M4', 'editar')
+  @EscopoEvento('evento')
   novoTurno(@Ctx() ctx: ContextoDb, @Param('id') id: string, @Body(new Validar(Turno)) dto: z.infer<typeof Turno>) {
     uuid.parse(id);
     return this.db.tx(ctx, async (tx) => {
@@ -263,6 +277,7 @@ export class EventosController {
 
   @Patch('turnos/:id')
   @Requer('M4', 'editar')
+  @EscopoEvento('turno')
   editarTurno(@Ctx() ctx: ContextoDb, @Param('id') id: string,
               @Body(new Validar(z.object({ nome: z.string().optional(), inicio: z.coerce.date().optional(), fim: z.coerce.date().optional() })))
               dto: { nome?: string; inicio?: Date; fim?: Date }) {
@@ -276,6 +291,7 @@ export class EventosController {
 
   @Post('turnos/:id/postos')
   @Requer('M4', 'editar')
+  @EscopoEvento('turno')
   novoPosto(@Ctx() ctx: ContextoDb, @Param('id') id: string, @Body(new Validar(Posto)) dto: z.infer<typeof Posto>) {
     uuid.parse(id);
     return this.db.tx(ctx, (tx) => this.inserirPosto(tx, id, dto));
@@ -283,6 +299,7 @@ export class EventosController {
 
   @Patch('postos/:id')
   @Requer('M4', 'editar')
+  @EscopoEvento('posto')
   editarPosto(@Ctx() ctx: ContextoDb, @Param('id') id: string,
               @Body(new Validar(Posto.partial().extend({ justificativa_vaga_aberta: z.string().nullish() })))
               dto: Partial<z.infer<typeof Posto>> & { justificativa_vaga_aberta?: string | null }) {
@@ -300,6 +317,7 @@ export class EventosController {
   /** A maior parte dos jobs se repete: clona turnos, postos e checklist deslocando as datas */
   @Post('eventos/:id/clonar')
   @Requer('M4', 'criar')
+  @EscopoEvento('evento')
   clonar(@Ctx() ctx: ContextoDb, @Param('id') id: string,
          @Body(new Validar(z.object({ novo_inicio: z.coerce.date(), nome: z.string().optional() }))) dto: { novo_inicio: Date; nome?: string }) {
     uuid.parse(id);
@@ -308,6 +326,7 @@ export class EventosController {
 
   @Post('eventos/:id/checklist')
   @Requer('M4', 'editar')
+  @EscopoEvento('evento')
   novoItemChecklist(@Ctx() ctx: ContextoDb, @Param('id') id: string,
                     @Body(new Validar(z.object({ descricao: z.string().min(3), responsavel_id: uuid.nullish(), prazo: z.coerce.date().nullish() })))
                     dto: { descricao: string; responsavel_id?: string | null; prazo?: Date | null }) {
@@ -318,6 +337,7 @@ export class EventosController {
 
   @Patch('checklist/:id')
   @Requer('M4', 'editar')
+  @EscopoEvento('checklist')
   concluirItem(@Ctx() ctx: ContextoDb, @Param('id') id: string, @Body(new Validar(z.object({ concluido: z.boolean() }))) dto: { concluido: boolean }) {
     return this.db.tx(ctx, (tx) =>
       tx.um('UPDATE checklist_item SET concluido_em = CASE WHEN $2 THEN now() END WHERE id = $1 RETURNING *', [id, dto.concluido]));
@@ -353,6 +373,7 @@ export class EventosController {
   /** A imagem em si (o painel busca com o token e mostra como blob) */
   @Get('fotos/:id')
   @Requer('M4', 'ver')
+  @EscopoEvento('foto')
   async foto(@Ctx() ctx: ContextoDb, @Param('id') id: string, @Res() res: Response) {
     uuid.parse(id);
     const f = await this.db.tx(ctx, (tx) => tx.um<{ tipo_mime: string; conteudo: Buffer }>(
@@ -363,6 +384,7 @@ export class EventosController {
 
   @Delete('fotos/:id')
   @Requer('M4', 'editar')
+  @EscopoEvento('foto')
   removerFoto(@Ctx() ctx: ContextoDb, @Param('id') id: string) {
     uuid.parse(id);
     return this.db.tx(ctx, async (tx) => {

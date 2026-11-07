@@ -2,7 +2,7 @@ import { Body, Controller, Get, Param, Post, Inject } from '@nestjs/common';
 import { z } from 'zod';
 import { DbService, ContextoDb } from '../db/db.service';
 import { Validar, uuid } from '../comum/validacao';
-import { Ctx, Requer, Usuario, UsuarioLogado } from '../auth/decorators';
+import { Ctx, Requer, Usuario, UsuarioLogado, EscopoEvento } from '../auth/decorators';
 import { garantirAcessoEvento } from '../eventos/escopo';
 import { config } from '../config';
 
@@ -78,6 +78,7 @@ export class CampoController {
   /** Lançamento pelo supervisor (celular do promotor sem bateria/sinal) — exige observação */
   @Post('alocacoes/:id/ponto-manual')
   @Requer('M6', 'editar')
+  @EscopoEvento('alocacao')
   pontoManual(@Ctx() ctx: ContextoDb, @Param('id') id: string, @Body(new Validar(PontoManual)) dto: z.infer<typeof PontoManual>) {
     uuid.parse(id);
     return this.db.tx({ ...ctx, motivo: dto.observacao }, (tx) =>
@@ -87,6 +88,7 @@ export class CampoController {
   /** Substituição em campo: quem faltou sai, o substituto entra confirmado no mesmo posto */
   @Post('alocacoes/:id/substituir')
   @Requer('M6', 'editar')
+  @EscopoEvento('alocacao')
   substituir(@Ctx() ctx: ContextoDb, @Param('id') id: string,
              @Body(new Validar(z.object({ substituto_id: uuid, motivo: z.string().min(5) }))) dto: { substituto_id: string; motivo: string }) {
     uuid.parse(id);

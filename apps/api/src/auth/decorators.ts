@@ -13,6 +13,17 @@ export interface UsuarioLogado {
 
 export const PUBLICO = 'publico';
 export const REQUER = 'requer';
+export const ESCOPO = 'escopo_evento';
+
+/** O que o :id da rota identifica, para achar o evento dele (ou "agregado": junta vários eventos) */
+export type AlvoEscopo = 'evento' | 'turno' | 'posto' | 'alocacao' | 'foto' | 'checklist' | 'pagamento' | 'agregado';
+
+/**
+ * Supervisor só mexe nos eventos sob sua supervisão. A rota declara o que é o :id
+ * e o ModuloGuard descobre o evento e confere. "agregado" (listas de vários eventos) fica fora do supervisor.
+ * Ex.: @EscopoEvento('alocacao')
+ */
+export const EscopoEvento = (alvo: AlvoEscopo) => SetMetadata(ESCOPO, alvo);
 
 /** Rota sem login (área do profissional por link, formulário público, health check). */
 export const Publico = () => SetMetadata(PUBLICO, true);

@@ -1,4 +1,4 @@
-import { BadRequestException, Body, ConflictException, Controller, Delete, Get, NotFoundException, Param, Patch, Post, Query,
+import { BadRequestException, Body, ConflictException, Controller, Delete, ForbiddenException, Get, NotFoundException, Param, Patch, Post, Query,
   Req, ServiceUnavailableException, Inject } from '@nestjs/common';
 import { z } from 'zod';
 import { DbService, ContextoDb } from '../db/db.service';
@@ -221,9 +221,10 @@ export class CadastrosController {
   @Requer('M3', 'editar')
   async editarCliente(@Ctx() ctx: ContextoDb, @Req() req: any, @Param('id') id: string, @Body(new Validar(Cliente.partial())) dto: Partial<z.infer<typeof Cliente>>) {
     uuid.parse(id);
-    if (!(await req.podeDadosPessoais())) delete dto.cpf;   // sem a permissão, o CPF gravado não muda
+    const podeDP = await req.podeDadosPessoais();
+    if (!podeDP) delete dto.cpf;   // sem a permissão, o CPF gravado não muda
     return this.db.tx(ctx, async (tx) => {
-      await this.conferirDocumento(tx, dto, id);
+      await this.conferirDocumento(tx, dto, id, podeDP);
       const campos = CAMPOS_CLIENTE.filter((k) => (dto as any)[k] !== undefined);
       const sets = campos.map((k, i) => `${k} = $${i + 2}`);
       if (dto.ativo !== undefined) sets.push(`status_alterado_em = CASE WHEN ativo IS DISTINCT FROM $${campos.indexOf('ativo') + 2} THEN now() ELSE status_alterado_em END`);
@@ -280,12 +281,19 @@ export class CadastrosController {
    * Pessoa jurídica usa CNPJ, pessoa física usa CPF (o outro é apagado).
    * Confere os dígitos e a duplicidade — inclusive com excluídos, que devem ser recuperados, não recadastrados.
    */
-  private async conferirDocumento(tx: any, dto: Partial<z.infer<typeof Cliente>>, id?: string) {
+  private async conferirDocumento(tx: any, dto: Partial<z.infer<typeof Cliente>>, id?: string, podeDP = true) {
     const atual = id ? await tx.um('SELECT pessoa, cnpj, cpf FROM cliente WHERE id = $1 AND excluido_em IS NULL', [id]) : null;
     if (id && !atual) throw new NotFoundException({ mensagem: 'Cliente não encontrado ou excluído.' });
     const pessoa = dto.pessoa ?? atual?.pessoa ?? 'juridica';
     const [coluna, rotulo, valido] = pessoa === 'fisica' ? ['cpf', 'CPF', cpfValido] as const : ['cnpj', 'CNPJ', cnpjValido] as const;
-    if (pessoa === 'fisica') dto.cnpj = null; else dto.cpf = null;
+    if (pessoa === 'fisica') dto.cnpj = null;
+    else {
+      // virar pessoa jurídica apaga o CPF gravado: apagar também é mexer em dado pessoal
+      if (!podeDP && atual?.cpf) {
+        throw new ForbiddenException({ codigo: 'sem_dados_pessoais', mensagem: 'Mudar para pessoa jurídica apaga o CPF: é preciso a permissão "Dados pessoais".' });
+      }
+      dto.cpf = null;
+    }
     const doc = dto[coluna];
     if (!doc) return;
     // documento antigo que não mudou não é revalidado (cadastros anteriores à validação)

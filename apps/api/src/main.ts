@@ -11,8 +11,10 @@ async function iniciar() {
   app.useBodyParser('json', { limit: '8mb' });
   app.setGlobalPrefix('api');
   app.enableCors({ origin: config.corsOrigens, credentials: true });
-  // atrás de proxy/CDN (Vercel, load balancer): IP real para o rate limit da área pública
-  app.getHttpAdapter().getInstance().set('trust proxy', 1);
+  // IP real para o limite de tentativas. Só confia em X-Forwarded-For quando há um proxy conhecido
+  // na frente (Vercel, Render, ou TRUST_PROXY definido): exposta direto (docker-compose), o cliente
+  // escolheria o próprio IP mudando o cabeçalho a cada tentativa.
+  app.getHttpAdapter().getInstance().set('trust proxy', config.trustProxy);
   // cabeçalhos de segurança: a API só devolve JSON, nunca é aberta dentro de outro site nem guardada em cache
   app.use((_req: unknown, res: any, next: () => void) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');

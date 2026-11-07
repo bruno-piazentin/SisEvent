@@ -4,6 +4,23 @@ function obrigatorio(nome: string, padraoDev?: string): string {
   return valor;
 }
 
+// valores de exemplo publicados no repositório (.env.example, docker-compose): em produção não servem
+const EXEMPLOS = ['dev-inseguro-troque-isto', 'troque-este-segredo-em-producao', 'troque-por-uma-sequencia-longa-e-aleatoria'];
+function segredo(nome: string): string {
+  const valor = obrigatorio(nome, 'dev-inseguro-troque-isto');
+  if (process.env.NODE_ENV === 'production' && EXEMPLOS.includes(valor)) {
+    throw new Error(`${nome} está com o valor de exemplo do repositório. Gere um valor próprio antes de publicar.`);
+  }
+  return valor;
+}
+
+/** trust proxy do Express: TRUST_PROXY (número de proxies ou 'loopback'); na Vercel e no Render, 1 */
+function confiancaProxy(): boolean | number | string {
+  const v = process.env.TRUST_PROXY;
+  if (v !== undefined && v !== '') return /^\d+$/.test(v) ? Number(v) : v === 'false' ? false : v;
+  return process.env.VERCEL || process.env.RENDER ? 1 : false;
+}
+
 export const config = {
   porta: Number(process.env.PORT ?? 3001),
   // Usuário membro do papel app_api (sem BYPASSRLS). Nunca use o superusuário aqui.
@@ -17,10 +34,13 @@ export const config = {
       ? { ca: process.env.DB_SSL_CA.replace(/\\n/g, '\n'), rejectUnauthorized: true }   // aceita o PEM em uma linha, com \n
       : { rejectUnauthorized: false })
     : undefined,
-  jwtSegredo: obrigatorio('JWT_SECRET', 'dev-inseguro-troque-isto'),
+  jwtSegredo: segredo('JWT_SECRET'),
   // Chave da criptografia dos dados pessoais (comum/cripto.ts). Gere com `npm run gerar-chave`.
   // Sem ela, quem já foi gravado não pode mais ser lido: guarde com os outros segredos.
-  dadosChave: obrigatorio('DADOS_CHAVE', 'dev-inseguro-troque-isto'),
+  dadosChave: segredo('DADOS_CHAVE'),
+  trustProxy: confiancaProxy(),
+  // Metabase: só os painéis listados aqui podem ser incorporados (vazio = nenhum)
+  metabasePaineis: (process.env.METABASE_DASHBOARDS ?? '').split(',').map((s) => Number(s.trim())).filter((n) => Number.isInteger(n) && n > 0),
   jwtValidade: process.env.JWT_EXPIRES_IN ?? '12h',
   // URL pública do app web — usada para montar o link mágico e a URL do QR
   appUrl: obrigatorio('APP_URL', 'http://localhost:3000'),

@@ -2,7 +2,7 @@ import { Body, Controller, ForbiddenException, Get, Param, Patch, Post, Query, R
 import { z } from 'zod';
 import { DbService, ContextoDb } from '../db/db.service';
 import { Validar, uuid, dinheiro } from '../comum/validacao';
-import { Ctx, Requer, Usuario, UsuarioLogado } from '../auth/decorators';
+import { Ctx, Requer, Usuario, UsuarioLogado, EscopoEvento } from '../auth/decorators';
 import { decifrar } from '../comum/cripto';
 
 /** M7 — Custo, fechamento, pagamento ao profissional, faturamento e margem */
@@ -13,6 +13,7 @@ export class FinanceiroController {
   /** O que impede o fechamento (vagas abertas sem justificativa, convites sem resposta, checkout pendente) */
   @Get('eventos/:id/pendencias')
   @Requer('M7', 'ver')
+  @EscopoEvento('evento')
   pendencias(@Ctx() ctx: ContextoDb, @Param('id') id: string) {
     uuid.parse(id);
     return this.db.tx(ctx, (tx) => tx.q('SELECT * FROM pendencias_fechamento($1)', [id]));
@@ -21,6 +22,7 @@ export class FinanceiroController {
   /** Critérios de aceite 1 e 3: valida pendências, calcula custos, gera pagamentos, fatura e margem */
   @Post('eventos/:id/fechar')
   @Requer('M7', 'aprovar')
+  @EscopoEvento('evento')
   fechar(@Ctx() ctx: ContextoDb, @Param('id') id: string,
          @Body(new Validar(z.object({ aceitar_checkout_pendente: z.boolean().default(false) }))) dto: { aceitar_checkout_pendente: boolean }) {
     uuid.parse(id);
@@ -30,6 +32,7 @@ export class FinanceiroController {
 
   @Post('eventos/:id/reabrir')
   @Requer('M7', 'aprovar')
+  @EscopoEvento('evento')
   reabrir(@Ctx() ctx: ContextoDb, @Usuario() u: UsuarioLogado, @Param('id') id: string,
           @Body(new Validar(z.object({ motivo: z.string().min(10) }))) dto: { motivo: string }) {
     if (u.perfil !== 'admin') throw new ForbiddenException({ codigo: 'somente_admin', mensagem: 'Só a administradora reabre evento fechado.' });
@@ -40,6 +43,7 @@ export class FinanceiroController {
   /** Detalhe do fechamento: custo por profissional (com memória de cálculo), fatura e margem */
   @Get('eventos/:id/fechamento')
   @Requer('M7', 'ver')
+  @EscopoEvento('evento')
   async fechamento(@Ctx() ctx: ContextoDb, @Param('id') id: string, @Req() req: any) {
     uuid.parse(id);
     const verValores = await req.pode('M7', 'ver_valores');
@@ -50,7 +54,8 @@ export class FinanceiroController {
       const pagamentos = await tx.q(
         `SELECT pg.*, pr.nome AS profissional FROM pagamento_profissional pg JOIN profissional pr ON pr.id = pg.profissional_id
           WHERE pg.evento_id = $1 ORDER BY pr.nome`, [id]);
-      const fatura = await tx.um('SELECT * FROM fatura_cliente WHERE evento_id = $1', [id]);
+      // fatura do cliente é receita: mesma permissão da margem
+      const fatura = verValores ? await tx.um('SELECT * FROM fatura_cliente WHERE evento_id = $1', [id]) : undefined;
       const margem = verValores ? await tx.um('SELECT * FROM vw_margem_evento WHERE evento_id = $1', [id]) : undefined;
       return { custos, pagamentos, fatura, margem };
     });
@@ -58,6 +63,7 @@ export class FinanceiroController {
 
   @Post('alocacoes/:id/lancamentos')
   @Requer('M7', 'criar')
+  @EscopoEvento('alocacao')
   lancamento(@Ctx() ctx: ContextoDb, @Param('id') id: string,
              @Body(new Validar(z.object({
                tipo: z.enum(['deslocamento', 'ajuda_custo', 'alimentacao', 'bonus', 'desconto', 'outro']),
@@ -73,6 +79,7 @@ export class FinanceiroController {
 
   @Post('eventos/:id/custos-diretos')
   @Requer('M7', 'criar')
+  @EscopoEvento('evento')
   custoDireto(@Ctx() ctx: ContextoDb, @Param('id') id: string,
               @Body(new Validar(z.object({ descricao: z.string(), valor: dinheiro, fornecedor_id: uuid.nullish(),
                                            repassa_cliente: z.boolean().default(false), vencimento: z.coerce.date().nullish() })))
@@ -87,6 +94,7 @@ export class FinanceiroController {
   /** Contas a pagar de freelancer */
   @Get('pagamentos')
   @Requer('M7', 'ver')
+  @EscopoEvento('agregado')
   async pagamentos(@Ctx() ctx: ContextoDb, @Req() req: any, @Query(new Validar(z.object({ status: z.string().optional() }))) q: { status?: string }) {
     const verDadosPessoais = await req.podeDadosPessoais();
     const itens = await this.db.tx(ctx, (tx) =>
@@ -103,6 +111,7 @@ export class FinanceiroController {
   /** Lote de pagamento (PIX em lote): agrupa pendentes e devolve CSV pronto para o banco */
   @Post('lotes-pagamento')
   @Requer('M7', 'aprovar')
+  @EscopoEvento('agregado')
   async lote(@Ctx() ctx: ContextoDb, @Req() req: any,
        @Body(new Validar(z.object({ descricao: z.string(), data_prevista: z.coerce.date(), pagamentos: z.array(uuid).min(1) })))
        dto: { descricao: string; data_prevista: Date; pagamentos: string[] }) {
@@ -114,18 +123,29 @@ export class FinanceiroController {
       const lote = await tx.um<{ id: string }>(
         'INSERT INTO lote_pagamento (descricao, data_prevista, criado_por) VALUES ($1, $2, app_usuario()) RETURNING id',
         [dto.descricao, dto.data_prevista]);
+      // só pagamentos de eventos fechados (evento reaberto ou cancelado não manda dinheiro)
       const itens = await tx.q(
         `UPDATE pagamento_profissional pg SET lote_id = $1, status = 'em_lote'
-           FROM profissional pr
+           FROM profissional pr, evento e
           WHERE pg.id = ANY($2::uuid[]) AND pg.status = 'pendente' AND pr.id = pg.profissional_id
+            AND e.id = pg.evento_id AND e.status = 'fechado'
           RETURNING pr.nome, pr.cpf, pg.chave_pix, pg.valor`, [lote!.id, dto.pagamentos]);
-      const csv = ['nome;cpf;chave_pix;valor', ...itens.map((i) => `${i.nome};${decifrar(i.cpf) ?? ''};${decifrar(i.chave_pix) ?? ''};${Number(i.valor).toFixed(2).replace('.', ',')}`)].join('\n');
+      // cada campo entre aspas e sem quebra de linha: um nome com ";" ou quebra não cria linha nova no
+      // arquivo do banco; começo com = + - @ vira texto, não fórmula, na planilha
+      const campo = (v: unknown) => {
+        let s = String(v ?? '').replace(/[\r\n\t]+/g, ' ');
+        if (/^[=+\-@]/.test(s)) s = `'${s}`;
+        return `"${s.replace(/"/g, '""')}"`;
+      };
+      const csv = ['nome;cpf;chave_pix;valor', ...itens.map((i) => [i.nome, decifrar(i.cpf) ?? '', decifrar(i.chave_pix) ?? '',
+        Number(i.valor).toFixed(2).replace('.', ',')].map(campo).join(';'))].join('\r\n');
       return { lote_id: lote!.id, quantidade: itens.length, total: itens.reduce((s, i) => s + Number(i.valor), 0), csv };
     });
   }
 
   @Patch('pagamentos/:id')
   @Requer('M7', 'editar')
+  @EscopoEvento('pagamento')
   marcarPago(@Ctx() ctx: ContextoDb, @Param('id') id: string,
              @Body(new Validar(z.object({ status: z.enum(['pago', 'cancelado']), comprovante_url: z.string().url().nullish() })))
              dto: { status: 'pago' | 'cancelado'; comprovante_url?: string | null }) {
@@ -139,6 +159,7 @@ export class FinanceiroController {
   /** Contas a receber: faturas por status e vencidas */
   @Get('faturas')
   @Requer('M7', 'ver_valores')
+  @EscopoEvento('agregado')
   faturas(@Ctx() ctx: ContextoDb) {
     return this.db.tx(ctx, (tx) =>
       tx.q(`SELECT f.*, e.nome AS evento, COALESCE(c.nome_fantasia, c.razao_social) AS cliente,
@@ -150,6 +171,7 @@ export class FinanceiroController {
   /** Margem por evento e por cliente/marca — o que a dona do negócio mais quer ver */
   @Get('margem')
   @Requer('M7', 'ver_valores')
+  @EscopoEvento('agregado')
   margem(@Ctx() ctx: ContextoDb, @Query(new Validar(z.object({ de: z.coerce.date().optional(), ate: z.coerce.date().optional() })))
          q: { de?: Date; ate?: Date }) {
     return this.db.tx(ctx, async (tx) => {

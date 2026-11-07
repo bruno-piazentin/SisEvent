@@ -108,7 +108,7 @@
     <tr><th style="width:28%">Perfil</th><th>Uso típico</th></tr>
     <tr><td>Administradora</td><td>Acesso total a todos os módulos liberados para a empresa, inclusive excluir registros e configurar acessos.</td></tr>
     <tr><td>Central / coordenação</td><td>Operação do dia a dia: cadastros, eventos e escala.</td></tr>
-    <tr><td>Supervisor</td><td>Acompanhamento em campo: presença, check-in e ocorrências.</td></tr>
+    <tr><td>Supervisor</td><td>Acompanhamento em campo: presença, check-in e ocorrências, <b>só nos eventos em que é supervisor</b>. Mesmo com permissões a mais, ele não vê nem altera os outros eventos, nem as listas que juntam vários eventos (pagamentos, faturas, margem e BI).</td></tr>
     <tr><td>Financeiro</td><td>Fechamento, valores e pagamentos.</td></tr>
   </table>
   <p>O que cada perfil pode fazer (ver, criar, editar, excluir, aprovar e ver valores) é ajustado pela administradora em <span class="menu">Módulos e acessos</span>.</p>
@@ -193,7 +193,7 @@
   <h3>Ativar, inativar e excluir</h3>
   <ul>
     <li><b>Inativar/Reativar</b>: muda a situação do cliente, sempre com confirmação.</li>
-    <li><b>Excluir</b>: só a administradora. O cliente some das listas, mas <b>continua guardado</b> no banco junto com o histórico de eventos.</li>
+    <li><b>Excluir</b>: só a administradora. O cliente some das listas, mas <b>continua guardado</b> no banco junto com o histórico de eventos. Enquanto estiver excluído, não recebe evento, contato, ocorrência nem fatura nova; para voltar a usar, recupere o cadastro.</li>
   </ul>
   <h3>Recuperar um cliente excluído</h3>
   <ol class="passos">
@@ -320,10 +320,12 @@
   <h3>QR de check-in</h3>
   <p>No evento (ou no menu <span class="menu">Campo</span>), clique em <span class="botao">Abrir QR de check-in</span> e deixe a tela aberta num tablet ou celular na entrada. O QR muda sozinho e cada código <b>vale por 30 segundos</b>, o que impede o check-in à distância com uma foto do QR.</p>
   <div class="dica"><b>Primeiro acesso no celular</b>Se o profissional escanear o QR sem ter aberto o link pessoal antes, o sistema pede que ele abra o link recebido no WhatsApp e escaneie de novo.</div>
+  <div class="dica"><b>Celular usado por mais de uma pessoa</b>O check-in pelo QR usa o link pessoal guardado no celular. Se alguém abrir o próprio link num celular que já guarda o de outra pessoa, o sistema não troca sozinho: aparece o aviso com o botão <span class="botao">Este celular é meu</span>. Na tela do QR aparece <b>“Registrando como …”</b> com o nome de quem vai receber o ponto.</div>
+  <p>Ponto registrado sem internet e enviado depois só vale se foi feito até <b>1 hora</b> antes do envio, e entra marcado como <b>verificar</b> para o supervisor conferir antes do fechamento.</p>
 
   <h3>Presença em campo</h3>
   <p>Aba <span class="botao">Presença em campo</span> do evento, que se atualiza a cada 20 segundos. Mostra quem está presente, atrasado (com os minutos de atraso), aguardando, saiu ou faltou. Registros fora do esperado (por exemplo, longe do local) aparecem com a marca <b>verificar</b>.</p>
-  <p>Quem tem permissão pode lançar <span class="botao">Entrada manual</span>, <span class="botao">Saída manual</span> ou <span class="botao">Falta</span>, sempre com um motivo.</p>
+  <p>Quem tem permissão pode lançar <span class="botao">Entrada manual</span>, <span class="botao">Saída manual</span> ou <span class="botao">Falta</span>, sempre com um motivo. O horário informado não pode estar no futuro nem fora da janela do turno, e a saída manual precisa de uma entrada registrada antes. Na <span class="botao">Substituição</span> de quem já tinha entrado, a saída do substituído é registrada na hora da troca, para a vaga não ser paga duas vezes.</p>
   <p>O menu <span class="menu">Campo</span> mostra os mesmos cards de prazo da tela inicial e abre com o card <b>Hoje</b> selecionado. Clique em outro card para ver os eventos daquela faixa. Cada evento aparece com a faixa colorida do prazo e com atalhos para o QR e para a presença.</p>
 </section>
 
@@ -347,11 +349,12 @@
   </table>
   <p>O quadro também mostra a <b>nota que cada profissional deu ao evento</b> no check-out, com o comentário dele. A nota da empresa entra na <b>nota média</b> do profissional e na sugestão de profissionais para os próximos eventos. Ela pode ser alterada depois, inclusive com o evento já fechado.</p>
   <p>Com as pendências resolvidas, quem tem permissão de aprovar no Financeiro clica em <span class="botao">Fechar evento e gerar pagamentos</span>.</p>
-  <div class="atencao"><b>O fechamento trava o evento</b>A escala e o local deixam de poder ser alterados, e os valores a pagar são gerados.</div>
+  <div class="atencao"><b>O fechamento trava o evento</b>A escala e o local deixam de poder ser alterados, e os valores a pagar são gerados. Depois do primeiro fechamento, o status do evento não muda mais pela edição do evento (por exemplo, para cancelado), mesmo se ele for reaberto: o caminho é fechar de novo pelo financeiro. Ao fechar de novo, pagamentos pendentes de quem ficou sem valor a receber são cancelados.</div>
+  <p>A <b>fatura do cliente</b> no detalhe do fechamento só aparece para quem tem permissão de ver valores, assim como a margem.</p>
   <p>Depois de fechado, o evento mostra a <b>receita</b>, o <b>custo de equipe</b>, os <b>custos diretos</b> e a <b>margem</b>, além dos <b>valores a pagar</b> por profissional (diária, hora extra, adicional noturno, descontos/adicionais e total).</p>
   <h3>Menu Financeiro</h3>
   <ul>
-    <li><b>Pagamentos pendentes</b> dos eventos fechados.</li>
+    <li><b>Pagamentos pendentes</b> dos eventos fechados. O lote de pagamento (arquivo CSV para o banco) só leva pagamentos de eventos que estão fechados; cada campo vai entre aspas.</li>
     <li><b>Margem por evento</b> e <b>por cliente</b>.</li>
     <li>Botão <span class="botao">Relatório</span> (para quem vê valores): lista os eventos do período com <b>data, cliente, receita, custo, margem</b> e o percentual, com o total e um resumo por cliente. Filtre por período (o padrão é o mês atual), cliente e situação (realizados, que já foram fechados, ou previstos, ainda estimados pelos postos). Eventos cancelados não entram. <span class="botao">Exportar planilha (CSV)</span> abre no Excel; <span class="botao">Imprimir / salvar PDF</span> imprime só o relatório.</li>
   </ul>
@@ -373,7 +376,7 @@
   <h3>Quem acessa o quê</h3>
   <p>O acesso é decidido em três camadas:</p>
   <ol class="passos">
-    <li><b>Módulos liberados para a empresa</b>: <span class="botao">Liberar</span> ou <span class="botao">Bloquear</span> cada módulo. Um módulo bloqueado some do menu de todos.</li>
+    <li><b>Módulos liberados para a empresa</b>: mostra os módulos contratados. Só o suporte do SisEvent (usuário master) libera ou bloqueia um módulo, conforme o contrato; a administradora da empresa vê a lista, mas não altera. Um módulo bloqueado some do menu de todos.</li>
     <li><b>Permissões por perfil</b>: para cada perfil (Central, Supervisor, Financeiro), marque o que ele pode fazer em cada módulo: ver, criar, editar, excluir, aprovar e ver valores. A Administradora tem acesso total aos módulos liberados.</li>
     <li><b>Ajustes individuais</b>: exceções para uma pessoa específica, que valem mais que o perfil.</li>
   </ol>
@@ -394,11 +397,12 @@
     <li>Têm a permissão: a <b>Administradora</b>, o usuário de manutenção e o perfil <b>Financeiro</b> (que precisa da chave PIX para pagar).</li>
     <li>Para liberar a outra pessoa, abra <span class="botao">Permissões</span> do usuário e clique na casa <b>Ver</b> da linha <b>DP Dados pessoais</b>. Para um perfil inteiro, use o quadro <b>2. Permissões por perfil</b>.</li>
     <li>O lote de pagamento (arquivo para o banco) leva CPF e chave PIX, por isso também exige essa permissão.</li>
+    <li>Mudar um cliente de pessoa física para jurídica apaga o CPF dele, por isso essa troca também exige a permissão.</li>
     <li>Esses dados ficam gravados <b>criptografados</b> no banco, e o histórico de alterações registra só que o campo mudou, nunca o valor.</li>
   </ul>
 
   <h3>Bloqueio por senha errada</h3>
-  <p>Depois de <b>5 senhas erradas seguidas</b>, o usuário fica bloqueado por <b>15 minutos</b>, mesmo que acerte a senha depois. A tela de login mostra até que horas. Se a pessoa esqueceu a senha, a administradora usa <span class="botao">Redefinir senha</span>.</p>
+  <p>Depois de <b>5 senhas erradas seguidas</b>, o usuário fica bloqueado por <b>15 minutos</b>, mesmo que acerte a senha depois. A tela de login mostra até que horas. Se a pessoa esqueceu a senha, a administradora usa <span class="botao">Redefinir senha</span>. A mesma regra vale para o usuário master do suporte.</p>
 </section>
 
 <!-- ================================================================ -->
@@ -453,6 +457,14 @@
   <h2>13. Histórico de atualizações</h2>
   <table>
     <tr><th style="width:18%">Data</th><th>O que mudou</th></tr>
+    <tr><td>07/11/2026</td><td>
+      <b>Segurança</b>: o check-in pelo QR mostra em nome de quem o ponto vai ser registrado, e o celular não troca sozinho para o link de outra pessoa ("Este celular é meu"); ponto sem internet vale até 1 hora e entra para conferir; ponto manual não aceita horário no futuro; a substituição registra a saída de quem saiu (capítulo 7).<br>
+      <b>Fechamento</b>: depois do primeiro fechamento, o status do evento só muda pelo financeiro; a fatura do cliente só aparece para quem vê valores; o lote de pagamento leva só eventos fechados (capítulo 8).<br>
+      <b>Clientes</b>: cliente excluído não recebe lançamentos novos até ser recuperado; mudar para pessoa jurídica exige a permissão de dados pessoais (capítulos 3 e 10).
+    </td></tr>
+    <tr><td>04/11/2026</td><td>
+      <b>Segurança</b>: o supervisor fica restrito aos eventos que supervisiona em todas as ações (ponto manual, substituição, escala, fechamento e fotos); a liberação de módulos passa a ser só do suporte do SisEvent; o usuário master também é bloqueado após 5 senhas erradas (capítulos 1 e 10).
+    </td></tr>
     <tr><td>03/11/2026</td><td>
       <b>Segurança</b>: permissão <b>DP · Dados pessoais</b> para ver CPF, RG, nascimento e dados bancários (sem ela os campos não aparecem); esses dados passam a ser gravados criptografados; bloqueio de 15 minutos após 5 senhas erradas; inativar ou redefinir a senha encerra as sessões abertas (capítulo 10).<br>
       <b>Painel inicial</b>: "Próximos eventos" virou um <b>calendário</b> com os eventos marcados na cor do prazo; clicar numa data lista os eventos do dia com os detalhes (capítulo 2).<br>

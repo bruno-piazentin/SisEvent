@@ -1,7 +1,7 @@
 'use client';
 import { use, useCallback, useEffect, useRef, useState } from 'react';
 import { apiPublica, fmt } from '@/lib/api';
-import { salvarToken } from '@/lib/token-profissional';
+import { lerToken, salvarToken } from '@/lib/token-profissional';
 import { pendentes, sincronizar, ouvirConexao } from '@/lib/fila-offline';
 import { interpretarQr, leitorDisponivel, lerQrDaCamera, registrarPonto } from '@/lib/ponto';
 import { LogoEmpresa } from '@/components/Marca';
@@ -17,12 +17,17 @@ export default function AreaProfissional({ params }: { params: Promise<{ token: 
   const [erro, setErro] = useState('');
   const [aviso, setAviso] = useState<{ ok: boolean; texto: string } | null>(null);
   const [fila, setFila] = useState(0);
+  const [trocar, setTrocar] = useState(false);
 
   const carregar = useCallback(async () => {
     try {
       const r = await apiPublica(`/p/${token}`);
       if (!r.ok) { setErro('Este link expirou ou não é mais válido. Peça um novo para a coordenação.'); return; }
       setDados(r); setErro('');
+      // só guarda um link que funcionou, e nunca troca em silêncio o de outra pessoa:
+      // o check-in pela câmera usa o link salvo, então trocar sem aviso registraria o ponto no nome errado
+      const salvo = lerToken();
+      if (!salvo || salvo === token) salvarToken(token); else setTrocar(true);
     } catch (e: any) {
       setErro(navigator.onLine ? e.message : 'Sem internet no momento. Seus registros de ponto ficam guardados no celular.');
     }
@@ -35,7 +40,6 @@ export default function AreaProfissional({ params }: { params: Promise<{ token: 
   }, [carregar]);
 
   useEffect(() => {
-    salvarToken(token);
     setFila(pendentes().length);
     carregar().then(sync);
     const parar = ouvirConexao(sync);
@@ -68,6 +72,16 @@ export default function AreaProfissional({ params }: { params: Promise<{ token: 
         </div>
       )}
       <div className="saudacao">Olá, {dados.profissional.nome.split(' ')[0]}!</div>
+
+      {trocar && (
+        <div className="aviso" style={{ marginTop: 10 }}>
+          Este celular está guardado com o acesso de outra pessoa para o check-in pelo QR.
+          Se este celular é seu, use o seu acesso a partir de agora.
+          <div style={{ marginTop: 8 }}>
+            <button className="btn pequeno" onClick={() => { salvarToken(token); setTrocar(false); }}>Este celular é meu</button>
+          </div>
+        </div>
+      )}
 
       {fila > 0 && <div className="aviso" style={{ marginTop: 10 }}>{fila} registro(s) aguardando internet para enviar.</div>}
       {aviso && <div className={`aviso ${aviso.ok ? 'ok' : 'erro'}`} style={{ marginTop: 10 }}>{aviso.texto}</div>}

@@ -17,13 +17,17 @@ export default function CheckinPorQr({ params }: { params: Promise<{ evento: str
   const [carregado, setCarregado] = useState(false);
   const [enviando, setEnviando] = useState(false);
   const [avaliado, setAvaliado] = useState('');
+  const [nome, setNome] = useState('');
 
   useEffect(() => {
     const t = lerToken();
     setToken(t);
     if (!t) { setCarregado(true); return; }
     apiPublica(`/p/${t}`)
-      .then((r) => setConv(r.ok ? r.convocacoes.find((c: any) => c.evento_id === evento && c.status === 'confirmado') : null))
+      .then((r) => {
+        if (r.ok) setNome(r.profissional?.nome ?? '');
+        setConv(r.ok ? r.convocacoes.find((c: any) => c.evento_id === evento && c.status === 'confirmado') : null);
+      })
       .catch(() => setConv(undefined))   // sem internet: deixa registrar mesmo assim (vai para a fila)
       .finally(() => setCarregado(true));
   }, [evento]);
@@ -71,6 +75,10 @@ export default function CheckinPorQr({ params }: { params: Promise<{ evento: str
   const tipo = conv?.checkin_em ? 'checkout' : 'checkin';
   return (
     <div className="mobile" style={{ paddingTop: 30 }}>
+      {/* o ponto vai para o acesso salvo neste celular: mostrar de quem é evita registrar no nome de outra pessoa */}
+      {nome && (
+        <p className="pequeno">Registrando como <strong>{nome}</strong>. Não é você? Abra o seu link de acesso e toque em "Este celular é meu".</p>
+      )}
       {conv && (
         <div className="convocacao">
           <div className="quando">{conv.evento}</div>

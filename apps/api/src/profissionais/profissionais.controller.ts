@@ -3,7 +3,8 @@ import type { Response } from 'express';
 import { z } from 'zod';
 import { DbService, ContextoDb, Tx } from '../db/db.service';
 import { RedesSociais, Validar, alturaCm, celular, inteiro, uuid } from '../comum/validacao';
-import { Ctx, Requer } from '../auth/decorators';
+import { Ctx, Requer, Usuario, UsuarioLogado } from '../auth/decorators';
+import { garantirAcessoEvento } from '../eventos/escopo';
 import { config } from '../config';
 import { CIFRADOS_PROFISSIONAL, cifrarCampos, decifrarCampos, indice } from '../comum/cripto';
 
@@ -256,19 +257,26 @@ export class ProfissionaisController {
 
   @Post(':id/avaliacoes')
   @Requer('M5', 'editar')
-  avaliar(@Ctx() ctx: ContextoDb, @Param('id') _id: string,
+  avaliar(@Ctx() ctx: ContextoDb, @Usuario() u: UsuarioLogado, @Param('id') id: string,
           @Body(new Validar(z.object({ alocacao_id: uuid, nota: z.number().int().min(1).max(5), observacao: z.string().trim().nullish() })
             .refine((a) => a.nota > 1 || (a.observacao ?? '').length >= 10, { message: 'Para a nota 1, conte o que motivou a nota.', path: ['observacao'] })))
           dto: { alocacao_id: string; nota: number; observacao?: string | null }) {
-    return this.db.tx(ctx, (tx) =>
-      tx.um(
+    uuid.parse(id);
+    return this.db.tx(ctx, async (tx) => {
+      // a alocação tem de ser deste profissional e, para o supervisor, de um evento sob a supervisão dele
+      const ev = await tx.um<{ evento_id: string }>(
+        `SELECT t.evento_id FROM alocacao a JOIN posto p ON p.id = a.posto_id JOIN turno t ON t.id = p.turno_id
+          WHERE a.id = $1 AND a.profissional_id = $2`, [dto.alocacao_id, id]);
+      if (!ev) throw new NotFoundException({ mensagem: 'Alocação não encontrada para este profissional.' });
+      await garantirAcessoEvento(tx, u, ev.evento_id);
+      return tx.um(
         `INSERT INTO avaliacao (alocacao_id, nota, observacao, avaliado_por) VALUES ($1, $2, $3, app_usuario())
          ON CONFLICT (alocacao_id) DO UPDATE SET nota = EXCLUDED.nota, observacao = EXCLUDED.observacao,
                 avaliado_por = EXCLUDED.avaliado_por, avaliado_em = now()
          RETURNING *`,
         [dto.alocacao_id, dto.nota, dto.observacao ?? null],
-      ),
-    );
+      );
+    });
   }
 
   /**

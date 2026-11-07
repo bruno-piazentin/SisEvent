@@ -2,7 +2,7 @@ import { Body, Controller, Get, NotFoundException, Param, Patch, Post, Query, In
 import { z } from 'zod';
 import { DbService, ContextoDb } from '../db/db.service';
 import { Validar, uuid } from '../comum/validacao';
-import { Ctx, Requer, Usuario, UsuarioLogado } from '../auth/decorators';
+import { Ctx, Requer, Usuario, UsuarioLogado, EscopoEvento } from '../auth/decorators';
 import { garantirAcessoEvento } from '../eventos/escopo';
 
 const NovaAlocacao = z.object({
@@ -23,6 +23,7 @@ export class EscalaController {
   /** Ranking de candidatos para o posto, com motivos e alertas */
   @Get('postos/:id/sugestoes')
   @Requer('M5', 'ver')
+  @EscopoEvento('posto')
   sugestoes(@Ctx() ctx: ContextoDb, @Param('id') id: string,
             @Query(new Validar(z.object({ limite: z.coerce.number().int().min(1).max(200).default(30),
                                           incluir_em_teste: z.coerce.boolean().default(true) })))
@@ -71,6 +72,7 @@ export class EscalaController {
    */
   @Post('postos/:id/alocacoes')
   @Requer('M5', 'criar')
+  @EscopoEvento('posto')
   alocar(@Ctx() ctx: ContextoDb, @Param('id') id: string, @Body(new Validar(NovaAlocacao)) dto: z.infer<typeof NovaAlocacao>) {
     uuid.parse(id);
     return this.db.tx(ctx, (tx) =>
@@ -86,6 +88,7 @@ export class EscalaController {
   /** Alocar vários de uma vez (ex.: os 4 primeiros da lista de sugestões) — tudo ou nada */
   @Post('postos/:id/alocacoes/lote')
   @Requer('M5', 'criar')
+  @EscopoEvento('posto')
   alocarLote(@Ctx() ctx: ContextoDb, @Param('id') id: string,
              @Body(new Validar(z.object({ profissionais: z.array(uuid).min(1).max(100) }))) dto: { profissionais: string[] }) {
     uuid.parse(id);
@@ -102,6 +105,7 @@ export class EscalaController {
 
   @Patch('alocacoes/:id')
   @Requer('M5', 'editar')
+  @EscopoEvento('alocacao')
   atualizar(@Ctx() ctx: ContextoDb, @Param('id') id: string, @Body(new Validar(AtualizarAlocacao)) dto: z.infer<typeof AtualizarAlocacao>) {
     uuid.parse(id);
     // o motivo também vai para a auditoria via app.motivo
@@ -118,6 +122,7 @@ export class EscalaController {
   /** Promove suplente a titular (ex.: titular recusou) */
   @Post('alocacoes/:id/promover')
   @Requer('M5', 'editar')
+  @EscopoEvento('alocacao')
   promover(@Ctx() ctx: ContextoDb, @Param('id') id: string) {
     uuid.parse(id);
     return this.db.tx({ ...ctx, motivo: 'suplente promovido a titular' }, (tx) =>
@@ -126,6 +131,7 @@ export class EscalaController {
 
   @Get('eventos/:id/historico-escala')
   @Requer('M5', 'ver')
+  @EscopoEvento('evento')
   historico(@Ctx() ctx: ContextoDb, @Param('id') id: string) {
     uuid.parse(id);
     return this.db.tx(ctx, (tx) => tx.q('SELECT * FROM vw_historico_escala WHERE evento_id = $1 ORDER BY em DESC LIMIT 500', [id]));

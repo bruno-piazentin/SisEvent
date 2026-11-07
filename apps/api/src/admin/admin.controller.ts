@@ -80,7 +80,8 @@ export class AdminController {
     @Param('codigo') codigo: string,
     @Body(new Validar(LiberarModulo)) dto: z.infer<typeof LiberarModulo>,
   ) {
-    this.exigirAdmin(u);
+    // os módulos seguem o contrato com o SisEvent: a empresa não libera para si o que não contratou
+    if (!u.master) throw new ForbiddenException({ codigo: 'somente_master', mensagem: 'A liberação de módulos é feita pelo SisEvent, conforme o contrato da empresa.' });
     z.enum(MODULOS).parse(codigo);
     return this.db.tx(ctx, (tx) =>
       tx.um(

@@ -1,7 +1,7 @@
-import { Controller, ForbiddenException, Get, Injectable, Logger, OnModuleDestroy, OnModuleInit, Param, Post, Req, ServiceUnavailableException, Inject } from '@nestjs/common';
+import { Controller, ForbiddenException, Get, Injectable, Logger, NotFoundException, OnModuleDestroy, OnModuleInit, Param, Post, Req, ServiceUnavailableException, Inject } from '@nestjs/common';
 import jwt from 'jsonwebtoken';
 import { DbService, ContextoDb } from '../db/db.service';
-import { Ctx, Requer, Usuario, UsuarioLogado } from '../auth/decorators';
+import { Ctx, Requer, Usuario, UsuarioLogado, EscopoEvento } from '../auth/decorators';
 import { config } from '../config';
 
 /**
@@ -16,6 +16,7 @@ export class BiController {
 
   @Get('indicadores')
   @Requer('BI', 'ver')
+  @EscopoEvento('agregado')
   async indicadores(@Ctx() ctx: ContextoDb, @Req() req: any) {
     const verValores = await req.pode('BI', 'ver_valores');
     return this.db.tx(ctx, async (tx) => {
@@ -56,14 +57,21 @@ export class BiController {
   /** URL assinada para embutir um painel do Metabase com a empresa travada */
   @Get('embed/:dashboard')
   @Requer('BI', 'ver')
+  @EscopoEvento('agregado')
   async embed(@Usuario() u: UsuarioLogado, @Param('dashboard') dashboard: string, @Req() req: any) {
     if (!config.metabaseUrl || !config.metabaseEmbedSegredo) {
       throw new ServiceUnavailableException({ codigo: 'bi_nao_configurado', mensagem: 'Metabase não configurado.' });
     }
+    // só os painéis liberados em METABASE_DASHBOARDS (conferidos com a empresa travada no Metabase):
+    // assinar qualquer número abriria painéis internos que mostram todas as empresas
+    const painel = Number(dashboard);
+    if (!config.metabasePaineis.includes(painel)) {
+      throw new NotFoundException({ codigo: 'painel_nao_liberado', mensagem: 'Painel não disponível.' });
+    }
     const verValores = await req.pode('BI', 'ver_valores');
     const token = jwt.sign(
       {
-        resource: { dashboard: Number(dashboard) },
+        resource: { dashboard: painel },
         // parâmetros "locked" no Metabase: a empresa e se pode ver valores
         params: { tenant_id: u.tenantId, ver_valores: verValores ? 'sim' : 'nao' },
         exp: Math.round(Date.now() / 1000) + 10 * 60,

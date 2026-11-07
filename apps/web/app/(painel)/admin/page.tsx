@@ -48,15 +48,16 @@ export default function Admin() {
 
       <section className="cartao" style={{ marginBottom: 16 }}>
         <h2>1. Módulos liberados para a empresa</h2>
+        {!me.usuario.master && <p className="suave pequeno">Os módulos seguem o contrato da empresa com o SisEvent. Para liberar outro módulo, fale com o suporte do SisEvent.</p>}
         <div className="tabela"><table>
-          <thead><tr><th>Módulo</th><th>Fase</th><th>Situação</th><th></th></tr></thead>
+          <thead><tr><th>Módulo</th><th>Fase</th><th>Situação</th>{me.usuario.master && <th></th>}</tr></thead>
           <tbody>
             {modulos.filter((m) => !m.so_permissao).map((m) => (
               <tr key={m.codigo}>
                 <td><strong>{m.codigo} — {m.nome}</strong><div className="suave pequeno">{m.descricao}</div></td>
                 <td>Fase {m.fase}</td>
                 <td>{m.liberado ? <span className="etiqueta ok">liberado {m.liberado_em && `em ${fmt.data(m.liberado_em)}`}</span> : <span className="etiqueta neutra">bloqueado</span>}</td>
-                <td style={{ textAlign: 'right' }}><button className={`btn pequeno ${m.liberado ? 'perigo' : 'primario'}`} onClick={() => alternarModulo(m)}>{m.liberado ? 'Bloquear' : 'Liberar'}</button></td>
+                {me.usuario.master && <td style={{ textAlign: 'right' }}><button className={`btn pequeno ${m.liberado ? 'perigo' : 'primario'}`} onClick={() => alternarModulo(m)}>{m.liberado ? 'Bloquear' : 'Liberar'}</button></td>}
               </tr>
             ))}
           </tbody>

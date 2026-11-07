@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, HttpException, Ip, Post, UnauthorizedException, Inject } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpException, Ip, Post, UnauthorizedException, Inject, Logger, OnModuleInit } from '@nestjs/common';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { z } from 'zod';
@@ -11,10 +11,11 @@ import { MODULOS } from '../admin/admin.controller';
 import { criarEmpresa } from '../admin/empresas.controller';
 import { Publico, Usuario, UsuarioLogado } from './decorators';
 
+// tamanhos limitados: o e-mail entra na chave do limite de tentativas, guardada em memória
 const Login = z.object({
-  empresa: z.string().min(2),          // slug da empresa: "rafadutra"
-  email: z.string().email(),
-  senha: z.string().min(6),
+  empresa: z.string().min(2).max(64),  // slug da empresa: "rafadutra"
+  email: z.string().trim().max(254).email(),
+  senha: z.string().min(6).max(200),
 });
 
 /** Senha errada 5 vezes seguidas: o usuário fica bloqueado por 15 minutos (mesmo acertando) */
@@ -25,8 +26,25 @@ function bloqueado(ate: Date) {
 }
 
 @Controller('auth')
-export class AuthController {
+export class AuthController implements OnModuleInit {
+  private readonly log = new Logger('Auth');
   constructor(@Inject(DbService) private readonly db: DbService) {}
+
+  /**
+   * Versões antigas gravavam o hash do master nas linhas dele em cada empresa; com isso a senha
+   * continuava valendo pela rota comum depois de o master ser desligado. Na subida, essas linhas
+   * perdem a senha (o master só entra pela rota própria, enquanto estiver configurado).
+   */
+  async onModuleInit() {
+    if (!config.master) return;
+    try {
+      const r = await this.db.tx({}, (tx) => tx.um<{ n: number }>('SELECT limpar_senha_master($1, $2) AS n',
+        [config.master!.email, config.master!.senhaHash]));
+      if (r?.n) this.log.log(`Senha do master removida de ${r.n} usuário(s) de empresa`);
+    } catch (e: any) {
+      this.log.warn(`Limpeza da senha do master não executada: ${e.message}`);
+    }
+  }
 
   @Publico()
   @Post('login')
@@ -41,7 +59,7 @@ export class AuthController {
     // mesma mensagem para usuário inexistente e senha errada (não revela quem tem conta)
     if (!u) throw new UnauthorizedException({ codigo: 'credenciais_invalidas', mensagem: 'E-mail ou senha incorretos.' });
 
-    if (master) {   // os demais já registram o acesso em registrar_tentativa_login
+    if (master) {   // os demais já registram o acesso em confirmar_login_ok
       await this.db.tx({ tenantId: u.tenant_id, usuarioId: u.id }, (tx) =>
         tx.q('UPDATE usuario SET ultimo_acesso = now() WHERE id = $1', [u.id]),
       );
@@ -57,11 +75,15 @@ export class AuthController {
     );
     if (!u) return undefined;
     if (u.bloqueado_ate) throw bloqueado(u.bloqueado_ate);
-    const ok = !!(u.ativo && u.senha_hash && (await bcrypt.compare(dto.senha, u.senha_hash)));
+    // a tentativa é reservada (conta como erro) ANTES de conferir a senha: tentativas simultâneas
+    // não passam do limite de 5, porque a 5ª reserva já bloqueia as seguintes
     const r = await this.db.tx({ tenantId: u.tenant_id }, (tx) =>
-      tx.um<{ ate: Date | null }>('SELECT registrar_tentativa_login($1, $2) AS ate', [u.id, ok]));
-    if (!ok && r?.ate) throw bloqueado(r.ate);
-    return ok ? u : undefined;
+      tx.um<{ ate: Date | null }>('SELECT reservar_tentativa_login($1) AS ate', [u.id]));
+    if (r?.ate) throw bloqueado(r.ate);
+    const ok = !!(u.ativo && u.senha_hash && (await bcrypt.compare(dto.senha, u.senha_hash)));
+    if (!ok) return undefined;
+    await this.db.tx({ tenantId: u.tenant_id }, (tx) => tx.q('SELECT confirmar_login_ok($1)', [u.id]));
+    return u;
   }
 
   /**
@@ -71,7 +93,13 @@ export class AuthController {
    */
   private async loginMaster(dto: z.infer<typeof Login>) {
     const master = config.master!;
-    if (!(await bcrypt.compare(dto.senha, master.senhaHash))) return undefined;
+    // mesmo bloqueio dos demais (5 erros seguidos = 15 minutos), guardado no banco para valer em todos os servidores
+    // reservada antes do bcrypt, como nos demais usuários
+    const trava = await this.db.tx({}, (tx) => tx.um<{ ate: Date | null }>(`SELECT reservar_tentativa_chave('master') AS ate`));
+    if (trava?.ate) throw bloqueado(trava.ate);
+    const ok = await bcrypt.compare(dto.senha, master.senhaHash);
+    if (!ok) return undefined;
+    await this.db.tx({}, (tx) => tx.q(`SELECT confirmar_chave_ok('master')`));
     const t = await this.db.tx({}, (tx) =>
       tx.um<{ id: string | null; empresas: number }>(
         'SELECT tenant_por_slug($1) AS id, (SELECT count(*)::int FROM listar_empresas()) AS empresas', [dto.empresa]));
@@ -83,14 +111,16 @@ export class AuthController {
     if (!tenantId) return undefined;
     return this.db.tx({ tenantId }, async (tx) => {
       if (primeiraEmpresa) await criarEmpresa(tx, tenantId!, dto.empresa, dto.empresa, MODULOS);
+      // a linha do master na empresa NÃO guarda senha: ele só entra por esta rota, enquanto
+      // MASTER_EMAIL/MASTER_SENHA_HASH estiverem no ambiente (desligar o master corta o acesso)
       await tx.q(
         `INSERT INTO usuario (perfil_id, nome, email, senha_hash)
-         SELECT p.id, $1, $2, $3 FROM perfil_acesso p WHERE p.codigo = 'admin'
+         SELECT p.id, $1, $2, NULL FROM perfil_acesso p WHERE p.codigo = 'admin'
          ON CONFLICT (tenant_id, email) DO UPDATE
-            SET perfil_id = EXCLUDED.perfil_id, nome = EXCLUDED.nome, senha_hash = EXCLUDED.senha_hash, ativo = true
+            SET perfil_id = EXCLUDED.perfil_id, nome = EXCLUDED.nome, senha_hash = NULL, ativo = true
           WHERE (usuario.perfil_id, usuario.nome, usuario.senha_hash, usuario.ativo)
-                IS DISTINCT FROM (EXCLUDED.perfil_id, EXCLUDED.nome, EXCLUDED.senha_hash, true)`,
-        [master.nome, master.email, master.senhaHash],
+                IS DISTINCT FROM (EXCLUDED.perfil_id, EXCLUDED.nome, NULL, true)`,
+        [master.nome, master.email],
       );
       return tx.um(
         `SELECT u.id, u.tenant_id, u.nome, p.codigo AS perfil

@@ -22,6 +22,8 @@ const MAPA_PG: Record<string, { status: number; codigo: string; mensagem?: strin
   P0006: { status: 409, codigo: 'status_invalido' },
   P0007: { status: 409, codigo: 'fechamento_bloqueado' },
   P0008: { status: 409, codigo: 'pagamento_enviado' },
+  P0009: { status: 422, codigo: 'horario_invalido' },
+  P0010: { status: 422, codigo: 'referencia_invalida' },
 };
 
 // Duplicidade com mensagem própria, pelo nome da restrição
