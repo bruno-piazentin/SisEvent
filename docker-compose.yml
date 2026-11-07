@@ -53,6 +53,7 @@ services:
       context: ./apps/web
       args:
         NEXT_PUBLIC_API_URL: ${PUBLIC_API_URL:-http://localhost:3001/api}
+        NEXT_PUBLIC_WHATSAPP: ${PUBLIC_WHATSAPP:-}
     depends_on: [api]
     ports: ["3000:3000"]
 

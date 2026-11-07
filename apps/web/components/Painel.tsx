@@ -28,7 +28,7 @@ export function usePainel() {
 
 /** Para onde cada módulo leva no menu. Módulos não liberados nem aparecem. */
 const ROTAS: Record<string, { href: string; rotulo: string }> = {
-  BI: { href: '/', rotulo: 'Painel' },
+  BI: { href: '/inicio', rotulo: 'Painel' },
   M1: { href: '/profissionais', rotulo: 'Profissionais' },
   M2: { href: '/captacao', rotulo: 'Captação' },
   M3: { href: '/clientes', rotulo: 'Clientes' },
@@ -68,7 +68,7 @@ export function Painel({ children }: { children: React.ReactNode }) {
     .filter((m) => m.modulo !== 'M5' || !pode('M4'))
     .sort((a, b) => (a.modulo === 'BI' ? -1 : b.modulo === 'BI' ? 1 : 0));
 
-  const ativo = (href: string) => (href === '/' ? caminho === '/' : caminho.startsWith(href));
+  const ativo = (href: string) => caminho.startsWith(href);
 
   return (
     <Contexto.Provider value={{ me, pode, recarregar, voltar }}>

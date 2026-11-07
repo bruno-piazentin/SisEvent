@@ -2,7 +2,7 @@
   "name": "SisEvent",
   "short_name": "SisEvent",
   "description": "Convocações e check-in dos eventos",
-  "start_url": "/",
+  "start_url": "/inicio",
   "display": "standalone",
   "background_color": "#f6f5f3",
   "theme_color": "#5b2a86",

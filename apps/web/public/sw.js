@@ -2,7 +2,7 @@
  * - guarda as páginas e arquivos estáticos já visitados (abre sem sinal)
  * - chamadas à API nunca vêm do cache: a fila offline do check-in é feita no app (lib/fila-offline.ts)
  */
-const CACHE = 'sisevent-v2';   // trocar a versão quando um .svg mudar (eles vêm do cache primeiro)
+const CACHE = 'sisevent-v3';   // trocar a versão quando um .svg mudar (eles vêm do cache primeiro)
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(['/manifest.webmanifest', '/icone.svg'])));
@@ -25,7 +25,7 @@ self.addEventListener('fetch', (e) => {
     e.respondWith(
       fetch(req)
         .then((res) => { const copia = res.clone(); caches.open(CACHE).then((c) => c.put(req, copia)); return res; })
-        .catch(() => caches.match(req).then((r) => r || caches.match('/'))),
+        .catch(() => caches.match(req).then((r) => r || caches.match('/inicio'))),
     );
     return;
   }

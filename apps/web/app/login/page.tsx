@@ -22,7 +22,7 @@ export default function Login() {
       const r = await api('/auth/login', { method: 'POST', json: { empresa, email, senha } });
       salvarSessao(r);
       try { localStorage.setItem('sisevent_empresa', empresa.trim().toLowerCase()); } catch { /* sem armazenamento */ }
-      router.replace('/');
+      router.replace('/inicio');
     } catch (e: any) {
       setErro(e.message);
     } finally {
