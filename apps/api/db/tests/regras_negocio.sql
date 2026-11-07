@@ -1,6 +1,8 @@
 -- =====================================================================
 -- Testes das regras de negócio no banco (rodar após reset-local.sh)
 --   psql $DATABASE_URL -v ON_ERROR_STOP=1 -f db/tests/regras_negocio.sql
+-- Use o usuário DONO do schema (não o da API): os blocos 11 e 13 criam outra empresa e trocam
+-- para o papel app_api sozinhos.
 -- Tudo roda dentro de uma transação desfeita no final (não suja o seed).
 -- Cada bloco DO falha com EXCEPTION se a regra não se comportar como esperado.
 -- =====================================================================
@@ -87,6 +89,11 @@ SELECT nome, disponibilidade, nota_media
                             (SELECT fim FROM turno WHERE id = '70000000-0000-0000-0000-000000000001'));
 
 \echo '── 6. Check-in pelo celular com QR rotativo'
+-- os eventos do seed caem no próximo sábado, ou HOJE se o teste rodar num sábado; nesse caso cruzam o
+-- turno "agora" abaixo e a trava de conflito recusa os mesmos profissionais. Empurra uma semana.
+UPDATE turno SET inicio = inicio + interval '7 days', fim = fim + interval '7 days'
+ WHERE evento_id IN ('60000000-0000-0000-0000-000000000001', '60000000-0000-0000-0000-000000000002')
+   AND tstzrange(inicio, fim) && tstzrange(now() - interval '1 hour', now() + interval '6 hours');
 -- evento acontecendo AGORA para testar o ponto
 INSERT INTO evento (id, cliente_id, praca_id, nome, status, latitude, longitude)
 VALUES ('60000000-0000-0000-0000-0000000000aa', '50000000-0000-0000-0000-000000000002',
@@ -191,6 +198,11 @@ BEGIN
    WHERE a.posto_id = '80000000-0000-0000-0000-0000000000aa' AND a.profissional_id = '40000000-0000-0000-0000-000000000009';
   INSERT INTO custo_direto (evento_id, descricao, valor) VALUES (ev, 'Kit uniforme', 120);
 
+  -- a nota é obrigatória para quem fez check-in (migração 022): sem ela não fecha
+  ASSERT (SELECT count(*) FROM pendencias_fechamento(ev) WHERE tipo = 'avaliacao_pendente') = 3, 'avaliação pendente dos 3 que trabalharam';
+  INSERT INTO avaliacao (alocacao_id, nota, observacao, avaliado_por)
+  SELECT a.id, 4, NULL, app_usuario() FROM alocacao a WHERE a.posto_id = '80000000-0000-0000-0000-0000000000aa';
+
   r := fechar_evento(ev, p_aceitar_checkout_pendente => true);
   RAISE NOTICE 'ok — fechado: receita %, custo equipe %, diretos %, margem % (% %%)',
     r->>'receita', r->>'custo_equipe', r->>'custos_diretos', r->>'margem', r->>'margem_pct';
@@ -249,6 +261,104 @@ SELECT ano_mes, eventos, eventos_fechados, receita, custo_equipe, margem, margem
   FROM analytics.kpi_mensal WHERE tenant_id = '00000000-0000-0000-0000-000000000001' ORDER BY ano_mes;
 SELECT d.evento, f.realizado, f.receita, f.custo_equipe, f.margem, f.margem_pct, f.efetivo_previsto, f.efetivo_realizado
   FROM analytics.fato_evento f JOIN analytics.dim_evento d USING (evento_id) ORDER BY d.evento;
+
+\echo '── 13. Correções da auditoria de segurança (migração 025)'
+INSERT INTO tenant (id, nome, slug) VALUES ('00000000-0000-0000-0000-0000000000b2', 'Empresa B', 'empresa-b');
+INSERT INTO profissional (id, tenant_id, nome, celular)
+VALUES ('4b000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-0000000000b2', 'Prof da Empresa B', '+550002');
+INSERT INTO cliente (id, tenant_id, razao_social)
+VALUES ('5b000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-0000000000b2', 'Cliente da Empresa B');
+SET LOCAL ROLE app_api;
+SELECT set_config('app.tenant_id', '00000000-0000-0000-0000-000000000001', true) \g /dev/null
+DO $$
+DECLARE v_aloc uuid; v_cli uuid; r timestamptz; n int := 0; i int;
+BEGIN
+  -- alocação confirmada de um dos eventos do seed (ainda abertos)
+  SELECT a.id INTO v_aloc FROM alocacao a JOIN posto p ON p.id = a.posto_id JOIN turno t ON t.id = p.turno_id
+   WHERE t.evento_id IN ('60000000-0000-0000-0000-000000000001', '60000000-0000-0000-0000-000000000002')
+     AND a.status = 'confirmado' AND a.tipo = 'titular' LIMIT 1;
+  ASSERT v_aloc IS NOT NULL, 'seed com alocação confirmada';
+
+  -- FK de outra empresa: o banco recusa mesmo com o id certo
+  BEGIN
+    UPDATE alocacao SET profissional_id = '4b000000-0000-0000-0000-000000000001' WHERE id = v_aloc;
+    RAISE EXCEPTION 'FALHOU: escalou profissional de outra empresa';
+  EXCEPTION WHEN SQLSTATE 'P0010' THEN RAISE NOTICE 'ok — profissional de outra empresa recusado';
+  END;
+  BEGIN
+    UPDATE evento SET cliente_id = '5b000000-0000-0000-0000-000000000001' WHERE id = '60000000-0000-0000-0000-000000000002';
+    RAISE EXCEPTION 'FALHOU: evento com cliente de outra empresa';
+  EXCEPTION WHEN SQLSTATE 'P0010' THEN RAISE NOTICE 'ok — cliente de outra empresa recusado';
+  END;
+
+  -- cliente excluído não recebe lançamento novo; recuperado, volta a receber
+  SELECT cliente_id INTO v_cli FROM evento WHERE id = '60000000-0000-0000-0000-000000000001';
+  UPDATE cliente SET excluido_em = now() WHERE id = v_cli;
+  BEGIN
+    INSERT INTO cliente_contato (cliente_id, nome) VALUES (v_cli, 'Contato novo');
+    RAISE EXCEPTION 'FALHOU: contato em cliente excluído';
+  EXCEPTION WHEN SQLSTATE 'P0010' THEN NULL;
+  END;
+  BEGIN
+    INSERT INTO evento (cliente_id, praca_id, nome)
+    SELECT cliente_id, praca_id, 'Clone' FROM evento WHERE id = '60000000-0000-0000-0000-000000000001';
+    RAISE EXCEPTION 'FALHOU: evento em cliente excluído';
+  EXCEPTION WHEN SQLSTATE 'P0010' THEN NULL;
+  END;
+  UPDATE evento SET nome = nome WHERE id = '60000000-0000-0000-0000-000000000001';   -- editar outros campos segue livre
+  UPDATE cliente SET excluido_em = NULL WHERE id = v_cli;
+  INSERT INTO cliente_contato (cliente_id, nome) VALUES (v_cli, 'Contato depois de recuperar');
+  RAISE NOTICE 'ok — cliente excluído bloqueado; recuperado, liberado';
+
+  -- ponto manual: nada no futuro, saída só depois de entrada
+  BEGIN
+    PERFORM registrar_ponto_supervisor(v_aloc, 'checkin', now() + interval '2 hours', 'teste');
+    RAISE EXCEPTION 'FALHOU: ponto manual no futuro';
+  EXCEPTION WHEN SQLSTATE 'P0009' THEN NULL;
+  END;
+  BEGIN
+    PERFORM registrar_ponto_supervisor(v_aloc, 'checkout', now() - interval '1 minute', 'teste');
+    RAISE EXCEPTION 'FALHOU: saída manual sem entrada';
+  EXCEPTION WHEN SQLSTATE 'P0009' THEN NULL;
+  END;
+  RAISE NOTICE 'ok — ponto manual com limites';
+
+  -- bloqueio de login: a reserva vem antes da senha; 5 tentativas passam, a 6ª já volta bloqueada
+  FOR i IN 1..6 LOOP
+    r := reservar_tentativa_login('10000000-0000-0000-0000-000000000003');
+    IF r IS NOT NULL THEN n := n + 1; END IF;
+  END LOOP;
+  ASSERT n = 1, format('esperado 1 bloqueio em 6 tentativas, veio %s', n);
+  PERFORM confirmar_login_ok('10000000-0000-0000-0000-000000000003');
+  BEGIN
+    PERFORM 1 FROM bloqueio_login LIMIT 1;
+    RAISE EXCEPTION 'FALHOU: API lê bloqueio_login direto';
+  EXCEPTION WHEN insufficient_privilege THEN NULL;
+  END;
+  RAISE NOTICE 'ok — bloqueio de login atômico';
+
+  -- views respeitam o RLS de quem consulta (security_invoker)
+  ASSERT NOT EXISTS (SELECT 1 FROM vw_margem_evento WHERE tenant_id <> app_tenant()), 'margem de outra empresa visível';
+  RAISE NOTICE 'ok — views só mostram a própria empresa';
+
+  -- auditoria de tabela filha guarda a empresa
+  INSERT INTO usuario_permissao VALUES ('10000000-0000-0000-0000-000000000002', 'M7', 'criar', true);
+  ASSERT EXISTS (SELECT 1 FROM auditoria WHERE tabela = 'usuario_permissao' AND tenant_id = app_tenant()), 'auditoria sem empresa';
+  RAISE NOTICE 'ok — auditoria de permissão visível para a empresa';
+END $$;
+RESET ROLE;
+DO $$
+DECLARE t text := 'token-de-teste-da-auditoria';
+BEGIN
+  -- link do profissional cai quando a empresa é inativada
+  INSERT INTO acesso_profissional (tenant_id, profissional_id, token_hash, expira_em)
+  VALUES ('00000000-0000-0000-0000-000000000001', '40000000-0000-0000-0000-000000000001', digest(t, 'sha256'), now() + interval '1 day');
+  ASSERT autenticar_profissional(t) IS NOT NULL, 'link ativo autentica';
+  UPDATE tenant SET ativo = false WHERE id = '00000000-0000-0000-0000-000000000001';
+  ASSERT autenticar_profissional(t) IS NULL, 'link funciona com a empresa inativa';
+  UPDATE tenant SET ativo = true WHERE id = '00000000-0000-0000-0000-000000000001';
+  RAISE NOTICE 'ok — empresa inativa derruba o link do profissional';
+END $$;
 
 \echo ''
 \echo '✔ Todos os testes passaram (transação será desfeita)'
