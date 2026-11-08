@@ -1,7 +1,7 @@
 {
   "name": "sisevent",
   "private": true,
-  "description": "SisEvent — gestão de casting, escala, check-in e financeiro de eventos (Rafa Dutra Eventos)",
+  "description": "Cachet — gestão de casting, escala, check-in e financeiro de eventos (Rafa Dutra Eventos)",
   "workspaces": ["apps/api", "apps/web"],
   "scripts": {
     "dev:api": "npm run dev -w @sisevent/api",

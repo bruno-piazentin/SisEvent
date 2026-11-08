@@ -360,6 +360,76 @@ BEGIN
   RAISE NOTICE 'ok — empresa inativa derruba o link do profissional';
 END $$;
 
+\echo '── 14. Casting (inscrição e triagem) e LGPD (pedidos, prazo de guarda, anonimização)'
+DO $$
+BEGIN
+  -- link de Casting só vale com a Captação (M2) liberada
+  DELETE FROM modulo_liberado WHERE tenant_id = '00000000-0000-0000-0000-000000000001' AND modulo = 'M2';
+  ASSERT NOT EXISTS (SELECT 1 FROM casting_empresa('rafadutra')), 'sem M2 o link de Casting não abre';
+  INSERT INTO modulo_liberado (tenant_id, modulo) VALUES ('00000000-0000-0000-0000-000000000001', 'M2');
+  ASSERT (SELECT nome FROM casting_empresa('RafaDutra')) IS NOT NULL, 'com M2 o link abre (código sem diferenciar maiúsculas)';
+  ASSERT (SELECT nome FROM titular_empresa('rafadutra')) IS NOT NULL, 'formulário de direitos vale para qualquer empresa ativa';
+  RAISE NOTICE 'ok — link de Casting depende da Captação liberada';
+END $$;
+SET LOCAL ROLE app_api;
+SELECT set_config('app.tenant_id', '00000000-0000-0000-0000-000000000001', true) \g /dev/null
+DO $$
+DECLARE v_livre uuid; v_escalado uuid;
+BEGIN
+  INSERT INTO inscricao_casting (nome, celular, data_nascimento, cidade, uf, consentimento_lgpd_em, versao_politica)
+  VALUES ('Candidata Teste', '+5543911112222', '1999-03-03', 'Londrina', 'PR', now(), '1.0');
+  BEGIN
+    INSERT INTO inscricao_casting (nome, celular, consentimento_lgpd_em) VALUES ('Candidata Teste', '+5543911112222', now());
+    RAISE EXCEPTION 'FALHOU: duas inscrições pendentes com o mesmo celular';
+  EXCEPTION WHEN unique_violation THEN NULL;
+  END;
+  BEGIN
+    INSERT INTO inscricao_casting (nome, celular) VALUES ('Sem Consentimento', '+5543911113333');
+    RAISE EXCEPTION 'FALHOU: inscrição sem consentimento';
+  EXCEPTION WHEN not_null_violation THEN NULL;
+  END;
+  RAISE NOTICE 'ok — inscrição exige consentimento e não duplica pendente';
+
+  -- prazo de guarda: reprovada há mais de 180 dias sai; a recente fica
+  INSERT INTO inscricao_casting (nome, celular, consentimento_lgpd_em, status, analisada_em) VALUES
+    ('Reprovada Antiga', '+5543911114444', now(), 'reprovada', now() - interval '181 days'),
+    ('Reprovada Recente', '+5543911115555', now(), 'reprovada', now() - interval '10 days');
+  ASSERT limpar_inscricoes_vencidas() = 1, 'apaga só a reprovada vencida';
+  ASSERT EXISTS (SELECT 1 FROM inscricao_casting WHERE nome = 'Reprovada Recente'), 'recente continua';
+  RAISE NOTICE 'ok — prazo de guarda das reprovadas (180 dias)';
+
+  -- pedido do titular precisa de um canal de resposta e ganha prazo de 15 dias
+  BEGIN
+    INSERT INTO solicitacao_titular (tipo, nome, relacao) VALUES ('exclusao', 'Titular Sem Contato', 'outro');
+    RAISE EXCEPTION 'FALHOU: pedido sem celular nem e-mail';
+  EXCEPTION WHEN check_violation THEN NULL;
+  END;
+  INSERT INTO solicitacao_titular (tipo, nome, relacao, email) VALUES ('exclusao', 'Titular Teste', 'profissional', 'titular@teste.local');
+  ASSERT (SELECT prazo_em::date - criada_em::date FROM solicitacao_titular WHERE nome = 'Titular Teste') = 15, 'prazo de 15 dias';
+  RAISE NOTICE 'ok — pedido do titular com protocolo e prazo';
+
+  -- anonimização: recusa quem está escalado no futuro; anonimiza quem não tem pendências
+  SELECT a.profissional_id INTO v_escalado FROM alocacao a JOIN posto p ON p.id = a.posto_id JOIN turno t ON t.id = p.turno_id
+   WHERE a.status IN ('convidado', 'confirmado') AND t.fim > now() LIMIT 1;
+  BEGIN
+    PERFORM anonimizar_profissional(v_escalado);
+    RAISE EXCEPTION 'FALHOU: anonimizou profissional escalado no futuro';
+  EXCEPTION WHEN SQLSTATE 'P0011' THEN NULL;
+  END;
+  SELECT pr.id INTO v_livre FROM profissional pr
+   WHERE NOT EXISTS (SELECT 1 FROM alocacao a WHERE a.profissional_id = pr.id)
+     AND NOT EXISTS (SELECT 1 FROM pagamento_profissional g WHERE g.profissional_id = pr.id) LIMIT 1;
+  ASSERT v_livre IS NOT NULL, 'seed com profissional sem escalas';
+  UPDATE profissional SET observacoes_internas = 'nota que identifica' WHERE id = v_livre;   -- gera histórico
+  PERFORM anonimizar_profissional(v_livre);
+  ASSERT (SELECT nome = 'Titular removido' AND status = 'bloqueado' AND cpf IS NULL AND observacoes_internas IS NULL
+            FROM profissional WHERE id = v_livre), 'cadastro anonimizado';
+  ASSERT (SELECT count(*) FROM auditoria WHERE registro_id = v_livre) = 1, 'histórico limpo, só o registro da anonimização';
+  ASSERT NOT EXISTS (SELECT 1 FROM acesso_profissional WHERE profissional_id = v_livre), 'links de acesso apagados';
+  RAISE NOTICE 'ok — anonimização a pedido do titular';
+END $$;
+RESET ROLE;
+
 \echo ''
 \echo '✔ Todos os testes passaram (transação será desfeita)'
 ROLLBACK;

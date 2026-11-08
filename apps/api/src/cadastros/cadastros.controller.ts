@@ -119,7 +119,7 @@ export class CadastrosController {
     let r: Response;
     try {
       // a política do Nominatim exige identificar a aplicação
-      r = await fetch(url, { headers: { 'User-Agent': 'SisEvent/1.0 (gestao de eventos)', 'Accept-Language': 'pt-BR' }, signal: AbortSignal.timeout(8000) });
+      r = await fetch(url, { headers: { 'User-Agent': 'Cachet/1.0 (gestao de eventos)', 'Accept-Language': 'pt-BR' }, signal: AbortSignal.timeout(8000) });
     } catch {
       throw new ServiceUnavailableException({ mensagem: 'Serviço de mapas indisponível. Tente de novo ou use "Minha localização atual".' });
     }

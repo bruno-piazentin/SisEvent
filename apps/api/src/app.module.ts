@@ -14,6 +14,8 @@ import { CampoController } from './campo/campo.controller';
 import { FinanceiroController } from './financeiro/financeiro.controller';
 import { BiAgendador, BiController } from './bi/bi.controller';
 import { PublicoController } from './publico/publico.controller';
+import { CaptacaoController, CastingPublicoController } from './captacao/captacao.controller';
+import { PrivacidadeController, TitularesPublicoController } from './privacidade/privacidade.controller';
 
 /**
  * Monólito modular: um controller por módulo do escopo (M1..M9 + BI).
@@ -34,6 +36,10 @@ import { PublicoController } from './publico/publico.controller';
     FinanceiroController,     // M7
     BiController,             // BI
     PublicoController,        // área do profissional por link
+    CaptacaoController,       // M2: triagem das inscrições de casting
+    CastingPublicoController, // inscrição pública de casting (link da empresa)
+    PrivacidadeController,    // LGPD: pedidos dos titulares, exportação e anonimização
+    TitularesPublicoController, // LGPD: formulário público de direitos do titular
   ],
   providers: [
     BiAgendador,

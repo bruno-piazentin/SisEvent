@@ -5,6 +5,7 @@ import { DbService, ContextoDb } from '../db/db.service';
 import { Avaliacao, Validar, alturaCm, uuid, dinheiro } from '../comum/validacao';
 import { Ctx, Requer, Usuario, UsuarioLogado, EscopoEvento } from '../auth/decorators';
 import { filtroEscopoEventos, garantirAcessoEvento } from './escopo';
+import { exigirImagem } from '../comum/imagem';
 
 const Requisitos = z.object({
   altura_min: alturaCm.optional(),
@@ -362,6 +363,7 @@ export class EventosController {
     uuid.parse(id);
     const conteudo = Buffer.from(dto.base64, 'base64');
     if (!conteudo.length || conteudo.length > FOTO_MAX) throw new BadRequestException({ mensagem: 'A foto deve ter até 5 MB.' });
+    exigirImagem(conteudo, dto.tipo_mime);
     return this.db.tx(ctx, async (tx) => {
       await garantirAcessoEvento(tx, u, id);
       return tx.um(`INSERT INTO evento_foto (evento_id, nome_arquivo, tipo_mime, tamanho, conteudo, legenda)

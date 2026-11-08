@@ -8,6 +8,19 @@ import { config } from './config';
 async function iniciar() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, { logger: ['error', 'warn', 'log'] });
   // fotos do local chegam em base64 (já reduzidas no navegador); o padrão de 100 kB não comporta
+  // formulários públicos (sem login) têm teto menor: ninguém de fora manda 8 MB de uma vez.
+  // Confere o Content-Length antes de ler o corpo; sem ele (envio "em pedaços") também barra.
+  const TETOS_PUBLICOS: [string, number][] = [['/api/publico/casting/', 6 * 1024 * 1024], ['/api/publico/titulares/', 16 * 1024]];
+  app.use((req: any, res: any, next: () => void) => {
+    const teto = req.method === 'POST' && TETOS_PUBLICOS.find(([prefixo]) => req.path.startsWith(prefixo))?.[1];
+    if (teto) {
+      const tamanho = Number(req.headers['content-length']);
+      if (!Number.isFinite(tamanho) || tamanho > teto) {
+        return res.status(413).json({ codigo: 'envio_grande', mensagem: 'O envio passou do tamanho permitido. Use fotos menores.' });
+      }
+    }
+    next();
+  });
   app.useBodyParser('json', { limit: '8mb' });
   app.setGlobalPrefix('api');
   app.enableCors({ origin: config.corsOrigens, credentials: true });
@@ -28,7 +41,7 @@ async function iniciar() {
   app.getHttpAdapter().getInstance().disable('x-powered-by');
   app.enableShutdownHooks();
   await app.listen(config.porta);
-  new Logger('SisEvent').log(`API ouvindo em http://localhost:${config.porta}/api`);
+  new Logger('Cachet').log(`API ouvindo em http://localhost:${config.porta}/api`);
 }
 
 iniciar();

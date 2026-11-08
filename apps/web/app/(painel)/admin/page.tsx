@@ -48,7 +48,7 @@ export default function Admin() {
 
       <section className="cartao" style={{ marginBottom: 16 }}>
         <h2>1. Módulos liberados para a empresa</h2>
-        {!me.usuario.master && <p className="suave pequeno">Os módulos seguem o contrato da empresa com o SisEvent. Para liberar outro módulo, fale com o suporte do SisEvent.</p>}
+        {!me.usuario.master && <p className="suave pequeno">Os módulos seguem o contrato da empresa com o Cachet. Para liberar outro módulo, fale com o suporte do Cachet.</p>}
         <div className="tabela"><table>
           <thead><tr><th>Módulo</th><th>Fase</th><th>Situação</th>{me.usuario.master && <th></th>}</tr></thead>
           <tbody>
@@ -198,7 +198,7 @@ function Usuarios({ usuarios, perfis, modulos, onMudou }: { usuarios: any[]; per
                   <td>{u.ativo ? <span className="etiqueta ok">ativo</span> : <span className="etiqueta neutra">inativo</span>}</td>
                   <td className="pequeno">{fmt.dataHora(u.ultimo_acesso)}</td>
                   <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
-                    {u.master ? <span className="suave pequeno">usuário do SisEvent</span> : senhaDe === u.id ? (
+                    {u.master ? <span className="suave pequeno">usuário do Cachet</span> : senhaDe === u.id ? (
                       <form style={{ display: 'inline-flex', gap: 6 }} onSubmit={(ev) => {
                         ev.preventDefault();
                         editar(u, { senha }, `Senha de ${u.nome} redefinida.`).then((ok) => { if (ok) { setSenhaDe(null); setSenha(''); } });

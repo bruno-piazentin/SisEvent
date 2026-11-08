@@ -2,9 +2,9 @@
 import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { api, salvarSessao, sessao } from '@/lib/api';
+import { api, sair, sessao } from '@/lib/api';
 import { Rodape } from './Rodape';
-import { LogoEmpresa, MarcaSisEvent } from './Marca';
+import { LogoEmpresa, MarcaCachet } from './Marca';
 import type { Prazos } from '@/lib/prazos';
 
 type Acao = 'ver' | 'criar' | 'editar' | 'excluir' | 'aprovar' | 'ver_valores';
@@ -85,6 +85,9 @@ export function Painel({ children }: { children: React.ReactNode }) {
             {me.usuario.perfil === 'admin' && (
               <Link href="/admin" className={ativo('/admin') ? 'ativo' : ''}>Módulos e acessos <span className="cod">ADM</span></Link>
             )}
+            {me.usuario.perfil === 'admin' && (
+              <Link href="/lgpd" className={ativo('/lgpd') ? 'ativo' : ''}>Privacidade (LGPD) <span className="cod">LGPD</span></Link>
+            )}
             {me.usuario.master && (
               <Link href="/empresas" className={ativo('/empresas') ? 'ativo' : ''}>Empresas <span className="cod">MASTER</span></Link>
             )}
@@ -94,8 +97,8 @@ export function Painel({ children }: { children: React.ReactNode }) {
             <div style={{ fontWeight: 600 }}>{me.usuario.nome}</div>
             <div className="suave pequeno">{me.usuario.perfil}</div>
             <button className="btn pequeno" style={{ marginTop: 10 }}
-                    onClick={() => { salvarSessao(null); router.replace('/login'); }}>Sair</button>
-            <div style={{ marginTop: 20, opacity: .8 }}><MarcaSisEvent tamanho={20} /></div>
+                    onClick={async () => { await sair(); router.replace('/login'); }}>Sair</button>
+            <div style={{ marginTop: 20, opacity: .8 }}><MarcaCachet tamanho={20} /></div>
           </div>
         </aside>
         <main className="conteudo">

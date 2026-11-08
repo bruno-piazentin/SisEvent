@@ -132,6 +132,9 @@ export default function AreaProfissional({ params }: { params: Promise<{ token: 
       <p className="suave pequeno" style={{ marginTop: 28, textAlign: 'center' }}>
         Dica: adicione esta página à tela inicial do celular para abrir mais rápido.
       </p>
+      <p className="suave pequeno" style={{ textAlign: 'center' }}>
+        <a href="/privacidade">Privacidade</a> · <a href="/privacidade/solicitacao">Seus dados: acesso, correção e exclusão</a>
+      </p>
     </div>
   );
 }

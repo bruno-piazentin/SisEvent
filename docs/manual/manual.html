@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<title>Manual do SisEvent</title>
+<title>Manual do Cachet</title>
 <!--
   Fonte do manual em PDF. Ao mudar uma tela ou regra do sistema, atualize a seção dela aqui
   e acrescente uma linha em "Histórico de atualizações". Gere o PDF com: npm run manual
@@ -10,7 +10,7 @@
 -->
 <style>
   @page { size: A4; margin: 18mm 16mm 20mm;
-    @bottom-left { content: "Manual do SisEvent"; font: 8pt 'Segoe UI', sans-serif; color: #8a8592; }
+    @bottom-left { content: "Manual do Cachet"; font: 8pt 'Segoe UI', sans-serif; color: #8a8592; }
     @bottom-right { content: counter(page) " / " counter(pages); font: 8pt 'Segoe UI', sans-serif; color: #8a8592; } }
   @page :first { @bottom-left { content: none; } @bottom-right { content: none; } }
   :root { --roxo: #5b2a86; --roxo-claro: #efe7f6; --coral: #ef6f4c; --texto: #1d1b20; --suave: #6b6773; --borda: #e6e3e8;
@@ -58,14 +58,14 @@
 
 <div class="capa">
   <div>
-    <svg width="64" height="64" viewBox="0 0 512 512" aria-label="SisEvent"><rect width="512" height="512" rx="116" fill="#5b2a86"/><path d="M336 168H214a44 44 0 0 0 0 88h84a44 44 0 0 1 0 88H176" fill="none" stroke="#fff" stroke-width="56" stroke-linecap="round" stroke-linejoin="round"/><circle cx="388" cy="126" r="34" fill="#ef6f4c"/></svg>
-    <h1>Manual do SisEvent</h1>
+    <svg width="64" height="64" viewBox="0 0 512 512" aria-label="Cachet"><rect width="512" height="512" rx="116" fill="#5b2a86"/><path d="M336 168H214a44 44 0 0 0 0 88h84a44 44 0 0 1 0 88H176" fill="none" stroke="#fff" stroke-width="56" stroke-linecap="round" stroke-linejoin="round"/><circle cx="388" cy="126" r="34" fill="#ef6f4c"/></svg>
+    <h1>Manual do Cachet</h1>
     <div class="sub">Gestão de casting, escala, check-in e financeiro de eventos</div>
     <div class="faixa"></div>
   </div>
   <div class="meta">
     Atualizado em {{ATUALIZADO_EM}} · versão {{VERSAO}}<br>
-    Para a equipe interna das empresas que usam o SisEvent. As telas que aparecem para cada pessoa
+    Para a equipe interna das empresas que usam o Cachet. As telas que aparecem para cada pessoa
     dependem dos módulos liberados para a empresa e do perfil de acesso dela.
   </div>
 </div>
@@ -84,7 +84,9 @@
     <li><a href="#ocorrencias">Ocorrências</a><span class="desc">registro permanente em fichas</span></li>
     <li><a href="#admin">Módulos e acessos</a><span class="desc">administradora da empresa</span></li>
     <li><a href="#empresas">Empresas (usuário master)</a><span class="desc">várias empresas na mesma plataforma</span></li>
-    <li><a href="#breve">Módulos em preparação</a><span class="desc">M2, M8 e M9</span></li>
+    <li><a href="#captacao">Captação (Casting)</a><span class="desc">link de inscrição e triagem</span></li>
+    <li><a href="#lgpd">Privacidade (LGPD)</a><span class="desc">direitos dos titulares, exportação e exclusão</span></li>
+    <li><a href="#breve">Módulos em preparação</a><span class="desc">M8 e M9</span></li>
     <li><a href="#historico">Histórico de atualizações</a><span class="desc">o que mudou em cada versão</span></li>
   </ol>
 </section>
@@ -93,7 +95,7 @@
 <section class="capitulo" id="acesso">
   <h2>1. Acesso ao sistema</h2>
   <h3>Entrar</h3>
-  <p>O endereço principal do sistema abre a página de apresentação do SisEvent. Clique em <span class="botao">Entrar</span>, no topo, para ir ao login (quem já tem a sessão aberta vê <span class="botao">Abrir o sistema</span>). Depois de entrar, o painel inicial fica em <code>/inicio</code>; vale salvar esse endereço nos favoritos.</p>
+  <p>O endereço principal do sistema abre a página de apresentação do Cachet. Clique em <span class="botao">Entrar</span>, no topo, para ir ao login (quem já tem a sessão aberta vê <span class="botao">Abrir o sistema</span>). Depois de entrar, o painel inicial fica em <code>/inicio</code>; vale salvar esse endereço nos favoritos.</p>
   <p>Na tela de login, preencha três campos:</p>
   <table>
     <tr><th style="width:28%">Campo</th><th>O que digitar</th></tr>
@@ -128,7 +130,8 @@
     <tr><td>M5</td><td>Escala</td><td>Convocação e alocação (acessada de dentro do evento).</td></tr>
     <tr><td>M6</td><td>Campo</td><td>Check-in por link e QR, presença.</td></tr>
     <tr><td>M7</td><td>Financeiro</td><td>Fechamento, pagamentos e margem.</td></tr>
-    <tr><td>M2, M8, M9</td><td>Captação, Leads, Gestão</td><td>Em preparação (capítulo 12).</td></tr>
+    <tr><td>M2</td><td>Captação</td><td>Link de Casting e triagem das inscrições (capítulo 12).</td></tr>
+    <tr><td>M8, M9</td><td>Leads, Gestão</td><td>Em preparação (capítulo 14).</td></tr>
   </table>
 </section>
 
@@ -377,7 +380,7 @@
   <h3>Quem acessa o quê</h3>
   <p>O acesso é decidido em três camadas:</p>
   <ol class="passos">
-    <li><b>Módulos liberados para a empresa</b>: mostra os módulos contratados. Só o suporte do SisEvent (usuário master) libera ou bloqueia um módulo, conforme o contrato; a administradora da empresa vê a lista, mas não altera. Um módulo bloqueado some do menu de todos.</li>
+    <li><b>Módulos liberados para a empresa</b>: mostra os módulos contratados. Só o suporte do Cachet (usuário master) libera ou bloqueia um módulo, conforme o contrato; a administradora da empresa vê a lista, mas não altera. Um módulo bloqueado some do menu de todos.</li>
     <li><b>Permissões por perfil</b>: para cada perfil (Central, Supervisor, Financeiro), marque o que ele pode fazer em cada módulo: ver, criar, editar, excluir, aprovar e ver valores. A Administradora tem acesso total aos módulos liberados.</li>
     <li><b>Ajustes individuais</b>: exceções para uma pessoa específica, que valem mais que o perfil.</li>
   </ol>
@@ -389,7 +392,7 @@
     <li>usa <span class="botao">Redefinir senha</span> e <span class="botao">Inativar</span> / <span class="botao">Reativar</span> (com confirmação; o usuário inativo não entra, e o histórico fica guardado);</li>
     <li>em <span class="botao">Permissões</span>, vê a tabela módulo × ação daquela pessoa. Cada casa mostra ✓ (pode) ou × (não pode). Clicar inverte: em <b>verde</b>, liberado só para ela; em <b>vermelho</b>, bloqueado só para ela; sem cor, vale o perfil. Clicar de novo volta ao perfil, e <span class="botao">Voltar tudo ao perfil</span> desfaz todos os ajustes.</li>
   </ul>
-  <p>Para não perder o acesso, a administradora não pode inativar nem mudar o perfil do próprio usuário. O usuário de manutenção do SisEvent aparece com a marca <b>manutenção</b> e não pode ser alterado.</p>
+  <p>Para não perder o acesso, a administradora não pode inativar nem mudar o perfil do próprio usuário. O usuário de manutenção do Cachet aparece com a marca <b>manutenção</b> e não pode ser alterado.</p>
   <p>Inativar um usuário ou redefinir a senha dele <b>encerra na hora</b> as sessões que ele tinha abertas. Mudanças de perfil e de permissões valem já na próxima ação dele; o menu se atualiza no próximo carregamento da tela.</p>
 
   <h3>Dados pessoais (permissão DP)</h3>
@@ -409,7 +412,7 @@
 <!-- ================================================================ -->
 <section class="capitulo" id="empresas">
   <h2>11. Empresas (usuário master)</h2>
-  <p>O SisEvent atende várias empresas na mesma plataforma, por exemplo <code>rafadutra</code> e <code>rfk</code>. Cada empresa só enxerga os próprios dados: clientes, profissionais, eventos e valores de uma nunca aparecem para outra. Essa separação é garantida pelo banco de dados, não só pelas telas.</p>
+  <p>O Cachet atende várias empresas na mesma plataforma, por exemplo <code>rafadutra</code> e <code>rfk</code>. Cada empresa só enxerga os próprios dados: clientes, profissionais, eventos e valores de uma nunca aparecem para outra. Essa separação é garantida pelo banco de dados, não só pelas telas.</p>
   <p>O menu <span class="menu">Empresas</span> aparece só para o <b>usuário master</b> de manutenção. O master entra em qualquer empresa digitando o código dela no login, e lá tem perfil de Administradora.</p>
 
   <h3>Cadastrar uma empresa</h3>
@@ -442,12 +445,54 @@
 </section>
 
 <!-- ================================================================ -->
+<section class="capitulo" id="captacao">
+  <h2>12. Captação (Casting)</h2>
+  <p>Profissionais interessados em trabalhar com a empresa se inscrevem por um link próprio. As inscrições ficam numa fila de triagem e só entram no Banco de talentos depois de aprovadas. Precisa do módulo <b>M2</b> liberado (pelo suporte do Cachet).</p>
+  <h3>Link de Casting</h3>
+  <p>No menu <span class="menu">Captação</span>, o quadro <b>Link de Casting da empresa</b> mostra o endereço (<code>/casting/código-da-empresa</code>) com os botões <span class="botao">Copiar link</span>, <span class="botao">Baixar QR</span> e <span class="botao">Abrir formulário</span>. Divulgue no Instagram, no WhatsApp ou em cartazes.</p>
+  <h3>O que o candidato preenche</h3>
+  <ul>
+    <li>Nome, celular com WhatsApp, data de nascimento (18 anos ou mais), cidade e UF são obrigatórios.</li>
+    <li>Opcionais: nome artístico, e-mail, gênero, Instagram, bairro, região de preferência, funções de interesse, medidas, cabelo, olhos, tom de pele, tatuagem, locomoção, idiomas e experiência.</li>
+    <li>De 1 a 4 fotos, reduzidas no próprio celular antes do envio.</li>
+    <li>A autorização de uso dos dados e fotos (LGPD) é obrigatória. Fica registrada com data e a versão da Política de Privacidade aceita.</li>
+  </ul>
+  <p>O formulário não pede CPF, RG nem dados bancários: o DP coleta depois da aprovação. Um mesmo celular não pode ter duas inscrições esperando análise.</p>
+  <h3>Triagem</h3>
+  <p>As abas <b>Pendentes</b>, <b>Aprovadas</b> e <b>Reprovadas</b> mostram as inscrições com foto, idade, altura, cidade e funções. Clique numa inscrição para ver a ficha completa.</p>
+  <table>
+    <tr><th style="width:24%">Ação</th><th>O que acontece</th></tr>
+    <tr><td>Aprovar</td><td>A pessoa entra no Banco de talentos como profissional <b>em teste</b>, com as funções e as fotos enviadas (a primeira vira a principal). Se o celular já estiver cadastrado, o sistema avisa e não duplica.</td></tr>
+    <tr><td>Reprovar</td><td>Exige um motivo, que fica registrado para a equipe. As fotos são apagadas na hora, e os demais dados são apagados automaticamente 180 dias depois.</td></tr>
+    <tr><td>Excluir inscrição</td><td>Apaga de vez uma inscrição já analisada (por exemplo, a pedido da pessoa). Exige a permissão de excluir na Captação.</td></tr>
+  </table>
+  <div class="dica"><b>Data de nascimento</b>Quem não tem a permissão de dados pessoais (DP) vê só a idade do candidato.</div>
+</section>
+
+<!-- ================================================================ -->
+<section class="capitulo" id="lgpd">
+  <h2>13. Privacidade (LGPD)</h2>
+  <p>O Cachet publica a <b>Política de Privacidade</b> (<code>/privacidade</code>), a <b>Política de Cookies</b> (<code>/cookies</code>) e os <b>Termos de Uso</b> (<code>/termos</code>), com links no rodapé da página inicial, do login, do painel, do Casting e da área do profissional. A política traz as finalidades e as bases legais de cada uso, os prazos de guarda e os direitos dos titulares.</p>
+  <h3>Pedidos dos titulares</h3>
+  <p>Qualquer pessoa pode pedir acesso, correção, exclusão, cópia (portabilidade) dos seus dados ou retirar um consentimento pela página <b>Seus direitos</b> (<code>/privacidade/solicitacao</code>). O pedido vai para a empresa escolhida, recebe um protocolo e tem prazo de <b>15 dias</b>.</p>
+  <p>No menu <span class="menu">Privacidade (LGPD)</span> (só a administradora), os pedidos aparecem com protocolo, prazo e situação; os vencidos ficam marcados. Clique em <span class="botao">Atualizar</span> para mudar a situação e registrar a resposta dada ao titular (obrigatória para concluir ou recusar).</p>
+  <div class="atencao"><b>Confirme a identidade</b>Antes de atender, confira que o pedido veio do próprio titular, por exemplo respondendo pelo celular ou e-mail que a empresa já tem cadastrado.</div>
+  <h3>Exportar e excluir dados de um profissional</h3>
+  <p>Exigem a permissão de dados pessoais (DP). Busque o profissional pelo nome:</p>
+  <ul>
+    <li><span class="botao">Exportar dados</span>: baixa um arquivo com todo o cadastro, trabalhos e pagamentos (atende acesso e portabilidade).</li>
+    <li><span class="botao">Excluir (anonimizar)</span>: digite EXCLUIR para confirmar. O cadastro vira “Titular removido”, bloqueado; fotos, documentos, contatos, características e o link de acesso são apagados e o histórico de alterações é limpo. Escalas e pagamentos continuam registrados sem identificar a pessoa. Não funciona se houver pagamento pendente ou escala futura.</li>
+  </ul>
+  <h3>Cookies</h3>
+  <p>O sistema não usa cookies de publicidade nem de rastreamento, só o armazenamento necessário (sessão, tema, link do profissional, ponto sem internet). Na primeira visita aparece um aviso com o botão <span class="botao">Entendi</span>.</p>
+</section>
+
+<!-- ================================================================ -->
 <section class="capitulo" id="breve">
-  <h2>12. Módulos em preparação</h2>
+  <h2>14. Módulos em preparação</h2>
   <p>Estes módulos aparecem no menu quando liberados, com a lista do que vão oferecer:</p>
   <table>
     <tr><th style="width:12%">Código</th><th style="width:30%">Módulo</th><th>Previsto</th></tr>
-    <tr><td>M2</td><td>Captação e triagem</td><td>Formulário público de cadastro, fila de triagem e convite em massa por perfil e praça.</td></tr>
     <tr><td>M8</td><td>Leads e relatórios</td><td>Captura de leads com consentimento (LGPD), deduplicação, exportação para o cliente e relatório pós-evento.</td></tr>
     <tr><td>M9</td><td>Painel de gestão</td><td>Contas a receber, cadastro de fornecedores, eventos em risco e ocupação da base.</td></tr>
   </table>
@@ -455,11 +500,21 @@
 
 <!-- ================================================================ -->
 <section class="capitulo" id="historico">
-  <h2>13. Histórico de atualizações</h2>
+  <h2>15. Histórico de atualizações</h2>
   <table>
     <tr><th style="width:18%">Data</th><th>O que mudou</th></tr>
     <tr><td>07/11/2026</td><td>
-      <b>Página de apresentação</b>: o endereço principal mostra a apresentação do SisEvent, com o botão <b>Entrar</b>; o painel inicial passou para <code>/inicio</code> (capítulo 1).
+      <b>Segurança</b>: o botão <span class="botao">Sair</span> encerra a sessão também no servidor e desconecta o usuário dos outros aparelhos. Fotos e logos só entram se forem imagens JPG, PNG ou WEBP de verdade. Os formulários públicos (Casting e direitos do titular) têm limite diário por empresa (300 inscrições e 30 pedidos em 24 horas) e de tamanho do envio. O site passa a bloquear scripts que não sejam do próprio Cachet.
+    </td></tr>
+    <tr><td>07/11/2026</td><td>
+      <b>Novo nome</b>: o sistema passa a se chamar <b>Cachet</b>, com símbolo novo (um “C” com a moeda do cachê). Endereços, logins e dados continuam os mesmos.
+    </td></tr>
+    <tr><td>07/11/2026</td><td>
+      <b>Captação (Casting)</b>: link próprio de inscrição para profissionais interessados, com fotos e autorização LGPD, e fila de triagem para aprovar (vai ao Banco de talentos) ou reprovar (capítulo 12).<br>
+      <b>Privacidade (LGPD)</b>: Política de Privacidade, Política de Cookies e Termos de Uso; página de direitos dos titulares com protocolo e prazo; atendimento dos pedidos, exportação e exclusão por anonimização no painel (capítulo 13).
+    </td></tr>
+    <tr><td>07/11/2026</td><td>
+      <b>Página de apresentação</b>: o endereço principal mostra a apresentação do Cachet, com o botão <b>Entrar</b>; o painel inicial passou para <code>/inicio</code> (capítulo 1).
     </td></tr>
     <tr><td>07/11/2026</td><td>
       <b>Segurança</b>: o check-in pelo QR mostra em nome de quem o ponto vai ser registrado, e o celular não troca sozinho para o link de outra pessoa ("Este celular é meu"); ponto sem internet vale até 1 hora e entra para conferir; ponto manual não aceita horário no futuro; a substituição registra a saída de quem saiu (capítulo 7).<br>
@@ -467,7 +522,7 @@
       <b>Clientes</b>: cliente excluído não recebe lançamentos novos até ser recuperado; mudar para pessoa jurídica exige a permissão de dados pessoais (capítulos 3 e 10).
     </td></tr>
     <tr><td>04/11/2026</td><td>
-      <b>Segurança</b>: o supervisor fica restrito aos eventos que supervisiona em todas as ações (ponto manual, substituição, escala, fechamento e fotos); a liberação de módulos passa a ser só do suporte do SisEvent; o usuário master também é bloqueado após 5 senhas erradas (capítulos 1 e 10).
+      <b>Segurança</b>: o supervisor fica restrito aos eventos que supervisiona em todas as ações (ponto manual, substituição, escala, fechamento e fotos); a liberação de módulos passa a ser só do suporte do Cachet; o usuário master também é bloqueado após 5 senhas erradas (capítulos 1 e 10).
     </td></tr>
     <tr><td>03/11/2026</td><td>
       <b>Segurança</b>: permissão <b>DP · Dados pessoais</b> para ver CPF, RG, nascimento e dados bancários (sem ela os campos não aparecem); esses dados passam a ser gravados criptografados; bloqueio de 15 minutos após 5 senhas erradas; inativar ou redefinir a senha encerra as sessões abertas (capítulo 10).<br>
@@ -482,7 +537,7 @@
       <b>Usuários</b>: a administradora edita perfil, senha e situação e libera ou bloqueia permissões por pessoa em Módulos e acessos (capítulo 10).<br>
       <b>Cards de prazo dos eventos</b> com cores na tela inicial e no Campo, configuráveis por empresa (capítulos 2, 7 e 11).<br>
       <b>Empresas</b>: cadastro com os mesmos dados do cliente (CNPJ/CPF, contato, redes e endereço) e botão <b>Editar</b> (capítulo 11).<br>
-      <b>Marca do SisEvent</b> no login, no menu e no ícone do aplicativo (sai o “RD”).<br>
+      <b>Marca do Cachet</b> no login, no menu e no ícone do aplicativo (sai o “RD”).<br>
       <b>Logo da empresa</b>: cada empresa envia o próprio logo em Módulos e acessos (capítulo 10); ele aparece no menu e na página do profissional.<br>
       <b>Login</b>: o campo Empresa começa vazio e lembra a última empresa usada.<br>
       <b>Empresas</b>: cadastro de várias empresas pelo usuário master, com usuários, perfis, módulos e inativação (capítulo 11).<br>

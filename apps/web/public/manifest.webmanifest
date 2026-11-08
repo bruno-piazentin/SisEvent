@@ -1,6 +1,6 @@
 {
-  "name": "SisEvent",
-  "short_name": "SisEvent",
+  "name": "Cachet",
+  "short_name": "Cachet",
   "description": "Convocações e check-in dos eventos",
   "start_url": "/inicio",
   "display": "standalone",

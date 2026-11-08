@@ -1,21 +1,20 @@
-/** Símbolo do SisEvent (o mesmo desenho de public/icone.svg) */
-export function IconeSisEvent({ tamanho = 32 }: { tamanho?: number }) {
+/** Símbolo do Cachet (o mesmo desenho de public/icone.svg): um "C" com a moeda do cachê na abertura */
+export function IconeCachet({ tamanho = 32 }: { tamanho?: number }) {
   return (
     <svg width={tamanho} height={tamanho} viewBox="0 0 512 512" aria-hidden="true" style={{ flexShrink: 0 }}>
       <rect width="512" height="512" rx="116" fill="#5b2a86" />
-      <path d="M336 168H214a44 44 0 0 0 0 88h84a44 44 0 0 1 0 88H176" fill="none" stroke="#fff"
-            strokeWidth="56" strokeLinecap="round" strokeLinejoin="round" />
-      <circle cx="388" cy="126" r="34" fill="#ef6f4c" />
+      <path d="M338 172a118 118 0 1 0 0 168" fill="none" stroke="#fff" strokeWidth="56" strokeLinecap="round" />
+      <circle cx="364" cy="256" r="36" fill="#ef6f4c" />
     </svg>
   );
 }
 
 /** Símbolo + nome do produto (login e rodapé do menu) */
-export function MarcaSisEvent({ tamanho = 36 }: { tamanho?: number }) {
+export function MarcaCachet({ tamanho = 36 }: { tamanho?: number }) {
   return (
     <span className="marca-sisevent" style={{ fontSize: tamanho * 0.62 }}>
-      <IconeSisEvent tamanho={tamanho} />
-      <span>Sis<b>Event</b></span>
+      <IconeCachet tamanho={tamanho} />
+      <span>Cachet</span>
     </span>
   );
 }

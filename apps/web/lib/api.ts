@@ -55,6 +55,12 @@ export async function api<T = any>(caminho: string, opcoes: RequestInit & { json
   return corpo as T;
 }
 
+/** Sair: encerra a sessão também no servidor (um token copiado deixa de valer) e limpa o aparelho */
+export async function sair() {
+  try { await api('/auth/sair', { method: 'POST' }); } catch { /* sem rede: o token sai do aparelho mesmo assim */ }
+  salvarSessao(null);
+}
+
 /** Baixa um arquivo protegido (ex.: foto do local) e devolve uma URL local para <img> */
 export async function apiArquivoUrl(caminho: string): Promise<string> {
   const s = sessao();

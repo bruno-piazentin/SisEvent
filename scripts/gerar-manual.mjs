@@ -1,5 +1,5 @@
 /**
- * Gera docs/manual/Manual-SisEvent.pdf a partir de docs/manual/manual.html.
+ * Gera docs/manual/Manual-Cachet.pdf a partir de docs/manual/manual.html.
  *   npm run manual
  * Usa o Chrome ou o Edge já instalados (modo headless): nenhuma dependência nova.
  * Outro navegador: defina CHROME_PATH com o caminho do executável.
@@ -12,7 +12,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const raiz = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const fonte = join(raiz, 'docs', 'manual', 'manual.html');
-const destino = join(raiz, 'docs', 'manual', 'Manual-SisEvent.pdf');
+const destino = join(raiz, 'docs', 'manual', 'Manual-Cachet.pdf');
 
 // Chrome primeiro: em alguns Windows o Edge headless sai sem gerar nada (política da empresa, Edge já aberto)
 const navegadores = [
@@ -34,7 +34,7 @@ if (!navegadores.length) {
 let versao = 'local';
 try {
   versao = execFileSync('git', ['rev-parse', '--short', 'HEAD'], { cwd: raiz }).toString().trim();
-  if (execFileSync('git', ['status', '--porcelain', '--', '.', ':!docs/manual/Manual-SisEvent.pdf'], { cwd: raiz }).toString().trim()) versao += '*';
+  if (execFileSync('git', ['status', '--porcelain', '--', '.', ':!docs/manual/Manual-Cachet.pdf'], { cwd: raiz }).toString().trim()) versao += '*';
 } catch { /* fora de um repositório git */ }
 const hoje = new Date().toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
 

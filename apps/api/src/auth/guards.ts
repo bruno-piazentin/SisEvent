@@ -35,8 +35,10 @@ export class AutenticacaoGuard implements CanActivate {
     // master só vale enquanto ele estiver configurado no ambiente, e só para o usuário do master
     // (a marca no token sozinha não basta: trocar MASTER_EMAIL derruba os tokens do e-mail antigo)
     const master = !!p.master && !!config.master && String(atual?.email ?? '').toLowerCase() === config.master.email;
-    // iat vem em segundos: uma sessão aberta no mesmo segundo da revogação também cai (basta entrar de novo)
-    const revogada = !!atual?.sessoes_desde && p.iat * 1000 <= atual.sessoes_desde.getTime();
+    // ims (milissegundos) vem nos tokens novos; nos antigos, o iat em segundos: aí uma sessão aberta
+    // no mesmo segundo da revogação também cai (basta entrar de novo)
+    const emitido = typeof p.ims === 'number' ? p.ims : p.iat * 1000;
+    const revogada = !!atual?.sessoes_desde && emitido <= atual.sessoes_desde.getTime();
     if (!atual || (!atual.ativo && !master) || revogada) {
       throw new UnauthorizedException({ codigo: 'sessao_encerrada', mensagem: 'Sua sessão foi encerrada. Entre novamente.' });
     }

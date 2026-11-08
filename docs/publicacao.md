@@ -1,6 +1,6 @@
 # Publicação (Supabase + Render + Vercel)
 
-O SisEvent tem três partes, e cada uma vai para um serviço:
+O Cachet tem três partes, e cada uma vai para um serviço:
 
 | Parte | Pasta | Onde | Por quê |
 |---|---|---|---|
@@ -26,7 +26,7 @@ Faça na ordem: banco → API → site.
 ## 1. Banco (Supabase)
 
 1. Crie o projeto em https://supabase.com, região **South America (São Paulo)**. Guarde a senha do banco.
-2. **Desligue a Data API** (Project Settings → Data API → desativar). O SisEvent não usa a API automática do
+2. **Desligue a Data API** (Project Settings → Data API → desativar). O Cachet não usa a API automática do
    Supabase e ela exporia tabelas do schema `public` a quem tivesse a chave `anon`.
 3. Em **Connect**, copie duas *connection strings*:
    - **Session pooler** (porta 5432) → para as migrações.

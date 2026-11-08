@@ -64,7 +64,8 @@ export class AuthController implements OnModuleInit {
         tx.q('UPDATE usuario SET ultimo_acesso = now() WHERE id = $1', [u.id]),
       );
     }
-    const token = jwt.sign({ sub: u.id, tid: u.tenant_id, nome: u.nome, perfil: u.perfil, ...(master ? { master } : {}) },
+    // ims: emissão em milissegundos (o iat é em segundos). Sem ele, sair e entrar de novo no mesmo segundo derrubaria a sessão nova
+    const token = jwt.sign({ sub: u.id, tid: u.tenant_id, nome: u.nome, perfil: u.perfil, ims: Date.now(), ...(master ? { master } : {}) },
       config.jwtSegredo, { expiresIn: config.jwtValidade as jwt.SignOptions['expiresIn'] });
     return { token, usuario: { id: u.id, nome: u.nome, perfil: u.perfil, master } };
   }
@@ -128,6 +129,18 @@ export class AuthController implements OnModuleInit {
         [master.email],
       );
     });
+  }
+
+  /**
+   * Sair: as sessões deste usuário emitidas até agora deixam de valer no servidor (o guard compara
+   * com sessoes_desde). Um token copiado antes da saída não serve mais. Desconecta também os outros
+   * aparelhos dele: é o preço de não guardar lista de sessões.
+   */
+  @Post('sair')
+  @HttpCode(204)
+  async sair(@Usuario() u: UsuarioLogado) {
+    await this.db.tx({ tenantId: u.tenantId, usuarioId: u.id }, (tx) =>
+      tx.q('UPDATE usuario SET sessoes_desde = to_timestamp($2::float8 / 1000) WHERE id = $1', [u.id, Date.now()]));
   }
 
   /** Dados do usuário + menu: só os módulos liberados para a empresa E permitidos para ele. */

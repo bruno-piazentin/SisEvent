@@ -7,11 +7,12 @@ import { Ctx, Requer, Usuario, UsuarioLogado } from '../auth/decorators';
 import { garantirAcessoEvento } from '../eventos/escopo';
 import { config } from '../config';
 import { CIFRADOS_PROFISSIONAL, cifrarCampos, decifrarCampos, indice } from '../comum/cripto';
+import { exigirImagem } from '../comum/imagem';
 
-const MEIOS = ['carro_proprio', 'moto_propria', 'transporte_publico', 'aplicativo', 'bicicleta', 'a_pe', 'carona'] as const;
-const TAMANHOS = ['PP', 'P', 'M', 'G', 'GG', 'XG', 'XGG'] as const;
-const TIPOS_CABELO = ['liso', 'ondulado', 'cacheado', 'crespo', 'raspado'] as const;
-const CORES_CABELO = ['preto', 'castanho', 'loiro', 'ruivo', 'grisalho', 'colorido'] as const;
+export const MEIOS = ['carro_proprio', 'moto_propria', 'transporte_publico', 'aplicativo', 'bicicleta', 'a_pe', 'carona'] as const;
+export const TAMANHOS = ['PP', 'P', 'M', 'G', 'GG', 'XG', 'XGG'] as const;
+export const TIPOS_CABELO = ['liso', 'ondulado', 'cacheado', 'crespo', 'raspado'] as const;
+export const CORES_CABELO = ['preto', 'castanho', 'loiro', 'ruivo', 'grisalho', 'colorido'] as const;
 
 const FOTO_MAX = 5 * 1024 * 1024;
 const NovaFoto = z.object({
@@ -318,6 +319,7 @@ export class ProfissionaisController {
     uuid.parse(id);
     const conteudo = Buffer.from(dto.base64, 'base64');
     if (!conteudo.length || conteudo.length > FOTO_MAX) throw new BadRequestException({ mensagem: 'A foto deve ter até 5 MB.' });
+    exigirImagem(conteudo, dto.tipo_mime);
     return this.db.tx(ctx, async (tx) => {
       if (!(await tx.um('SELECT id FROM profissional WHERE id = $1', [id]))) throw new NotFoundException();
       // a primeira foto vira a principal

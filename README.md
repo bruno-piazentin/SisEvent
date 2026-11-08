@@ -1,4 +1,4 @@
-# SisEvent — Rafa Dutra Eventos
+# Cachet — Rafa Dutra Eventos
 
 Sistema web de gestão de casting e execução de eventos: do cadastro do promotor ao check-in pelo celular, fechamento do evento, pagamento e margem por job. Liberado por módulos e com camada de BI desde o início.
 
@@ -36,7 +36,7 @@ Para testar o check-in **no celular** na mesma rede Wi-Fi, troque `APP_URL` e `P
 
 ## Manual do usuário
 
-Manual em PDF para a equipe: [docs/manual/Manual-SisEvent.pdf](docs/manual/Manual-SisEvent.pdf).
+Manual em PDF para a equipe: [docs/manual/Manual-Cachet.pdf](docs/manual/Manual-Cachet.pdf).
 O texto fica em [docs/manual/manual.html](docs/manual/manual.html): ao mudar uma tela ou regra, atualize a seção dela
 e o "Histórico de atualizações", e gere o PDF de novo com `npm run manual` (usa o Chrome ou o Edge instalados).
 

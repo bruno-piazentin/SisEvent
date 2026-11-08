@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { api, salvarSessao } from '@/lib/api';
 import { Rodape } from '@/components/Rodape';
-import { MarcaSisEvent } from '@/components/Marca';
+import { MarcaCachet } from '@/components/Marca';
 
 export default function Login() {
   const router = useRouter();
@@ -33,7 +33,7 @@ export default function Login() {
   return (
     <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', gridTemplateRows: '1fr auto', padding: 16 }}>
       <form className="cartao form" style={{ width: '100%', maxWidth: 380 }} onSubmit={entrar}>
-        <MarcaSisEvent tamanho={40} />
+        <MarcaCachet tamanho={40} />
         <p className="suave" style={{ margin: 0 }}>Acesso da equipe interna. Profissionais entram pelo link recebido no WhatsApp.</p>
         <label>Empresa<input value={empresa} onChange={(e) => setEmpresa(e.target.value)} autoComplete="organization" placeholder="código da empresa, ex.: rafadutra" required /></label>
         <label>E-mail<input type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="username" required /></label>

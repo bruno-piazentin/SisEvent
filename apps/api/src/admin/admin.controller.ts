@@ -5,6 +5,7 @@ import { DbService, ContextoDb } from '../db/db.service';
 import { Validar, uuid } from '../comum/validacao';
 import { Ctx, Usuario, UsuarioLogado } from '../auth/decorators';
 import { config } from '../config';
+import { dataUrlImagemValida } from '../comum/imagem';
 
 export const MODULOS = ['M1', 'M2', 'M3', 'M4', 'M5', 'M6', 'M7', 'M8', 'M9', 'BI'] as const;
 const ACOES = ['ver', 'criar', 'editar', 'excluir', 'aprovar', 'ver_valores'] as const;
@@ -35,7 +36,8 @@ const EditarUsuario = z.object({
 // data URL já reduzida no navegador; null remove o logo (volta a mostrar as iniciais)
 export const Logo = z.object({
   logo: z.string().max(300_000, 'O logo deve ter até 220 KB.')
-    .regex(/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/, 'Envie o logo em PNG, JPG ou WEBP.').nullable(),
+    .regex(/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/, 'Envie o logo em PNG, JPG ou WEBP.')
+    .refine(dataUrlImagemValida, 'O arquivo não é uma imagem PNG, JPG ou WEBP válida.').nullable(),
 });
 
 /**
@@ -55,7 +57,7 @@ export class AdminController {
     const alvo = await tx.um('SELECT email FROM usuario WHERE id = $1', [id]);
     if (!alvo) throw new NotFoundException({ codigo: 'nao_encontrado', mensagem: 'Usuário não encontrado.' });
     if (config.master && String(alvo.email).toLowerCase() === config.master.email) {
-      throw new ForbiddenException({ codigo: 'usuario_master', mensagem: 'O usuário de manutenção do SisEvent não pode ser alterado.' });
+      throw new ForbiddenException({ codigo: 'usuario_master', mensagem: 'O usuário de manutenção do Cachet não pode ser alterado.' });
     }
   }
 
@@ -80,8 +82,8 @@ export class AdminController {
     @Param('codigo') codigo: string,
     @Body(new Validar(LiberarModulo)) dto: z.infer<typeof LiberarModulo>,
   ) {
-    // os módulos seguem o contrato com o SisEvent: a empresa não libera para si o que não contratou
-    if (!u.master) throw new ForbiddenException({ codigo: 'somente_master', mensagem: 'A liberação de módulos é feita pelo SisEvent, conforme o contrato da empresa.' });
+    // os módulos seguem o contrato com o Cachet: a empresa não libera para si o que não contratou
+    if (!u.master) throw new ForbiddenException({ codigo: 'somente_master', mensagem: 'A liberação de módulos é feita pelo Cachet, conforme o contrato da empresa.' });
     z.enum(MODULOS).parse(codigo);
     return this.db.tx(ctx, (tx) =>
       tx.um(

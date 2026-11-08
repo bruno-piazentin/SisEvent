@@ -1,8 +1,8 @@
-/* Service worker do SisEvent
+/* Service worker do Cachet
  * - guarda as páginas e arquivos estáticos já visitados (abre sem sinal)
  * - chamadas à API nunca vêm do cache: a fila offline do check-in é feita no app (lib/fila-offline.ts)
  */
-const CACHE = 'sisevent-v3';   // trocar a versão quando um .svg mudar (eles vêm do cache primeiro)
+const CACHE = 'sisevent-v4';   // trocar a versão quando um .svg mudar (eles vêm do cache primeiro)
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(['/manifest.webmanifest', '/icone.svg'])));

@@ -1,11 +1,11 @@
 import type { Metadata } from 'next';
-import { MarcaSisEvent } from '@/components/Marca';
+import { MarcaCachet } from '@/components/Marca';
 import { BotaoEntrar } from '@/components/site/BotaoEntrar';
 import { linkWhatsApp } from '@/lib/site';
 import s from './site.module.css';
 
 export const metadata: Metadata = {
-  title: 'SisEvent · Casting, escala, check-in e financeiro do seu evento em um só lugar',
+  title: 'Cachet · Casting, escala, check-in e financeiro do seu evento em um só lugar',
   description: 'Seu evento com gestão de casting, escala, check-in e financeiro, tudo em um único lugar. Do banco de talentos ao pagamento da equipe, com a margem de cada evento.',
 };
 
@@ -77,7 +77,7 @@ export default function PaginaSite() {
     <div className={s.site}>
       <header className={s.topo}>
         <div className={s.faixaTopo}>
-          <a href="#inicio" className={s.marca} aria-label="SisEvent, início da página"><MarcaSisEvent tamanho={34} /></a>
+          <a href="#inicio" className={s.marca} aria-label="Cachet, início da página"><MarcaCachet tamanho={34} /></a>
           <nav className={s.nav} aria-label="Seções">
             <a href="#recursos">Recursos</a>
             <a href="#como-funciona">Como funciona</a>
@@ -96,7 +96,7 @@ export default function PaginaSite() {
             <span className={s.selo}>Gestão de eventos e equipes de campo</span>
             <h1>Seu evento com gestão de <em>casting, escala, check-in e financeiro</em>, tudo em um único lugar.</h1>
             <p className={s.lead}>
-              Do banco de talentos ao pagamento da equipe: o SisEvent organiza cada etapa da operação e mostra
+              Do banco de talentos ao pagamento da equipe: o Cachet organiza cada etapa da operação e mostra
               quanto cada evento deu de margem.
             </p>
             <div className={s.ctas}>
@@ -168,7 +168,7 @@ export default function PaginaSite() {
 
         <section className={`${s.secao} ${s.comparativo}`}>
           <div className={s.lado}>
-            <h3>Sem o SisEvent</h3>
+            <h3>Sem o Cachet</h3>
             <ul className={s.listaContra}>
               <li>Escala montada em planilha e confirmada mensagem por mensagem</li>
               <li>Lista de presença no papel e horário de chegada no “confia”</li>
@@ -178,7 +178,7 @@ export default function PaginaSite() {
             </ul>
           </div>
           <div className={`${s.lado} ${s.ladoSim}`}>
-            <h3>Com o SisEvent</h3>
+            <h3>Com o Cachet</h3>
             <ul className={s.listaPro}>
               <li>Convite pelo link e confirmação registrada no sistema</li>
               <li>Check-in por QR com horário, localização e atraso calculado</li>
@@ -238,7 +238,7 @@ export default function PaginaSite() {
 
         <section className={s.final}>
           <h2>Casting, escala, check-in e financeiro do seu evento em um só lugar.</h2>
-          <p>Mostramos o SisEvent funcionando com a rotina da sua empresa. Chame no WhatsApp.</p>
+          <p>Mostramos o Cachet funcionando com a rotina da sua empresa. Chame no WhatsApp.</p>
           <a href={whatsapp} className={`${s.botao} ${s.claro} ${s.grande}`} target="_blank" rel="noopener noreferrer">
             <Icone nome="whatsapp" cheio /> Falar no WhatsApp
           </a>
@@ -247,16 +247,19 @@ export default function PaginaSite() {
 
       <footer className={s.rodape}>
         <div className={s.rodapeFaixa}>
-          <MarcaSisEvent tamanho={28} />
+          <MarcaCachet tamanho={28} />
           <nav aria-label="Rodapé">
             <a href="#recursos">Recursos</a>
             <a href="#como-funciona">Como funciona</a>
             <a href="#duvidas">Dúvidas</a>
             <a href="/login">Entrar</a>
+            <a href="/privacidade">Privacidade</a>
+            <a href="/termos">Termos de uso</a>
+            <a href="/cookies">Cookies</a>
           </nav>
         </div>
         <p>
-          © {new Date().getFullYear()} SisEvent · Desenvolvido by{' '}
+          © {new Date().getFullYear()} Cachet · Desenvolvido by{' '}
           <a href="https://www.unnacomunicacao.com.br" target="_blank" rel="noopener noreferrer">UNNA</a>
         </p>
       </footer>
