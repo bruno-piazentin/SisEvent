@@ -103,8 +103,10 @@ export class CastingPublicoController {
       if (hoje!.n >= INSCRICOES_DIA) {
         throw new HttpException({ codigo: 'muitas_tentativas', mensagem: 'Este casting recebeu muitas inscrições hoje. Tente de novo amanhã.' }, 429);
       }
+      // o celular não é confirmado: se outra pessoa usou o seu, a empresa reprova e exclui a inscrição falsa
       if (await tx.um("SELECT 1 FROM inscricao_casting WHERE celular = $1 AND status = 'pendente'", [dto.celular])) {
-        throw new ConflictException({ codigo: 'inscricao_em_analise', mensagem: 'Já recebemos uma inscrição com este celular. Ela está em análise.' });
+        throw new ConflictException({ codigo: 'inscricao_em_analise',
+          mensagem: `Já existe uma inscrição em análise com este celular. Se não foi você quem enviou, fale com a ${e.nome}: ela pode cancelar essa inscrição e liberar o seu celular.` });
       }
       // só funções e praça desta empresa (o RLS filtra as de outras)
       const funcoes = (await tx.q<{ id: string }>('SELECT id FROM funcao WHERE id = ANY($1::uuid[])', [dto.funcoes])).map((f) => f.id);

@@ -96,7 +96,7 @@ function Responder({ s, onFim }: { s: any; onFim: () => void }) {
   }
   return (
     <div className="form" style={{ marginTop: 10 }}>
-      <p className="suave pequeno" style={{ margin: 0 }}>Antes de atender, confirme que quem pediu é o titular (por exemplo, respondendo pelo mesmo celular ou e-mail que a empresa tem cadastrado).</p>
+      <p className="suave pequeno" style={{ margin: 0 }}>Antes de atender, confirme que quem pediu é o titular (por exemplo, respondendo pelo mesmo celular ou e-mail que a empresa tem cadastrado). A cópia dos dados é enviada só ao celular do cadastro, em “Cópia e exclusão” abaixo.</p>
       <label>Situação<select value={status} onChange={(e) => setStatus(e.target.value)}>
         <option value="em_andamento">Em andamento</option><option value="concluida">Concluída</option><option value="recusada">Recusada (explique o motivo)</option>
       </select></label>
@@ -114,6 +114,8 @@ function Ferramentas({ podeDp }: { podeDp: boolean }) {
   const [alvo, setAlvo] = useState<any>(null);
   const [confirmacao, setConfirmacao] = useState('');
   const [aviso, setAviso] = useState('');
+  const [envio, setEnvio] = useState<{ nome: string; celular: string; whatsapp: string } | null>(null);
+  const [erro, setErro] = useState('');
 
   useEffect(() => {
     if (busca.trim().length < 3) { setAchados([]); return; }
@@ -121,32 +123,42 @@ function Ferramentas({ podeDp }: { podeDp: boolean }) {
     return () => clearTimeout(t);
   }, [busca]);
 
-  async function exportar(p: any) {
-    const dados = await api(`/privacidade/profissionais/${p.id}/exportar`);
-    const url = URL.createObjectURL(new Blob([JSON.stringify(dados, null, 2)], { type: 'application/json' }));
-    const a = document.createElement('a');
-    a.href = url; a.download = `dados-${p.nome.toLowerCase().replace(/\s+/g, '-')}.json`; a.click();
-    URL.revokeObjectURL(url);
+  // a cópia (com CPF, RG e Pix) vai só para o celular do cadastro: a administradora não baixa o arquivo
+  async function enviarExportacao(p: any) {
+    setErro(''); setAviso(''); setEnvio(null);
+    try {
+      const r = await api(`/privacidade/profissionais/${p.id}/enviar-exportacao`, { method: 'POST' });
+      setEnvio({ nome: p.nome, celular: r.celular, whatsapp: r.whatsapp });
+    } catch (e: any) { setErro(e.message); }
   }
 
-  if (!podeDp) return <div className="cartao"><h2>Exportar e excluir dados</h2><p className="suave">É preciso a permissão "Dados pessoais" (DP) para exportar ou anonimizar cadastros.</p></div>;
+  if (!podeDp) return <div className="cartao"><h2>Cópia e exclusão de dados</h2><p className="suave">É preciso a permissão "Dados pessoais" (DP) para enviar a cópia ou anonimizar cadastros.</p></div>;
   return (
     <div className="cartao">
-      <h2>Exportar e excluir dados de um profissional</h2>
+      <h2>Cópia e exclusão dos dados de um profissional</h2>
       <p className="suave pequeno" style={{ marginTop: 0 }}>
-        <b>Exportar</b> gera um arquivo com todos os dados do cadastro (atende acesso e portabilidade).
+        <b>Enviar cópia</b> gera um link pessoal, válido por 72 horas, para o titular baixar todos os dados do cadastro (atende acesso e portabilidade).
+        O link vai só para o celular que já está no cadastro, nunca para o contato informado no pedido: assim ninguém se passa pela pessoa para receber os dados.
         <b> Excluir</b> anonimiza: apaga fotos, documentos, contatos e características, limpa o histórico de alterações e bloqueia o cadastro.
         Escalas e pagamentos continuam registrados sem identificar a pessoa. Inscrições de Casting são excluídas na tela de Captação.
       </p>
       <input placeholder="Buscar profissional pelo nome (3 letras ou mais)" value={busca} onChange={(e) => setBusca(e.target.value)} />
       {aviso && <div className="aviso ok" style={{ marginTop: 10 }}>{aviso}</div>}
+      {erro && <div className="aviso erro" style={{ marginTop: 10 }}>{erro}</div>}
+      {envio && (
+        <div className="aviso ok" style={{ marginTop: 10 }}>
+          Link da cópia de <b>{envio.nome}</b> pronto para o celular do cadastro ({envio.celular}). Vale por 72 horas.{' '}
+          <a className="btn pequeno primario" href={envio.whatsapp} target="_blank" rel="noopener noreferrer">Enviar pelo WhatsApp</a>
+          <div className="suave pequeno" style={{ marginTop: 6 }}>Se o celular do cadastro não for mais da pessoa, corrija o cadastro antes de enviar. Depois registre a resposta no pedido.</div>
+        </div>
+      )}
       {achados.length > 0 && (
         <div className="grade" style={{ marginTop: 10, gap: 8 }}>
           {achados.map((p) => (
             <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center', flexWrap: 'wrap', borderBottom: '1px solid var(--borda)', paddingBottom: 8 }}>
               <span><b>{p.nome}</b> <span className="suave pequeno">{[p.cidade, p.status].filter(Boolean).join(' · ')}</span></span>
               <span style={{ display: 'flex', gap: 6 }}>
-                <button className="btn pequeno" onClick={() => exportar(p)}>Exportar dados</button>
+                <button className="btn pequeno" onClick={() => enviarExportacao(p)}>Enviar cópia dos dados</button>
                 <button className="btn pequeno perigo" onClick={() => { setConfirmacao(''); setAlvo(p); }}>Excluir (anonimizar)</button>
               </span>
             </div>

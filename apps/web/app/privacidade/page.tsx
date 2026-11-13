@@ -114,7 +114,7 @@ export default function Privacidade() {
         <li>informação sobre a possibilidade de não consentir e as consequências disso;</li>
         <li>revogação do consentimento e oposição a tratamentos feitos com outras bases legais.</li>
       </ul>
-      <p><b>Como pedir:</b> preencha a página <Link href="/privacidade/solicitacao">Seus direitos</Link>, escolhendo a empresa com quem você tem relação. Você recebe um número de protocolo, e a resposta sai em até 15 dias. Para sua segurança, a empresa pode pedir a confirmação da sua identidade antes de atender.</p>
+      <p><b>Como pedir:</b> preencha a página <Link href="/privacidade/solicitacao">Seus direitos</Link>, escolhendo a empresa com quem você tem relação. Você recebe um número de protocolo, e a resposta sai em até 15 dias. Para sua segurança, a empresa pode pedir a confirmação da sua identidade antes de atender, e a cópia dos dados é enviada somente ao celular que consta no cadastro, por um link pessoal válido por 72 horas.</p>
       <p><b>Exclusão:</b> o cadastro é anonimizado. Fotos, documentos, contatos e características são apagados, e o histórico de alterações é limpo. Escalas e pagamentos já feitos continuam registrados sem identificar a pessoa, porque a lei obriga a guardá-los.</p>
       <p>Você também pode reclamar à Autoridade Nacional de Proteção de Dados (ANPD).</p>
 
